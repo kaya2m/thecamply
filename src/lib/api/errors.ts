@@ -15,7 +15,6 @@ export class ApiError extends Error {
     this.code = code
     this.details = details
 
-    // Maintain proper stack trace for where our error was thrown
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, ApiError)
     }
@@ -63,7 +62,6 @@ export class ApiError extends Error {
 // Error handler utility
 export const handleApiError = (error: unknown): string => {
   if (error instanceof ApiError) {
-    // Custom error messages based on status
     switch (error.status) {
       case 400:
         return error.message || 'Geçersiz istek'

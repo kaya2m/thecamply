@@ -103,7 +103,6 @@ export default function MapPage() {
               <XMarkIcon className="h-5 w-5" />
             </Button>
           </div>
-          
           <SearchInput
             placeholder="Search camps..."
             value={searchQuery}

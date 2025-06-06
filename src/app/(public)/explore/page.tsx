@@ -17,7 +17,6 @@ import { cn } from '@/shared/utils/cn'
 import dynamic from 'next/dynamic'
 import type { Camp } from '@/shared/types/camp'
 
-// Dynamically import map to avoid SSR issues
 const CampMap = dynamic(() => import('@/components/camp/CampMap'), {
   ssr: false,
   loading: () => <div className="h-96 bg-secondary-100 dark:bg-secondary-800 rounded-lg animate-pulse" />
@@ -35,7 +34,6 @@ export default function ExplorePage() {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
-    // In a real app, this would trigger a new API call with search query
   }
 
   const handleCampClick = (camp: Camp) => {
@@ -77,7 +75,6 @@ export default function ExplorePage() {
               size="lg"
             />
           </div>
-          
           <div className="flex items-center space-x-2">
             <Button
               variant="secondary"
@@ -87,7 +84,6 @@ export default function ExplorePage() {
               <FunnelIcon className="h-5 w-5" />
               <span>Filters</span>
             </Button>
-            
             <div className="flex items-center border border-secondary-200 dark:border-secondary-700 rounded-lg p-1">
               <button
                 onClick={() => setViewMode('grid')}

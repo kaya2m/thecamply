@@ -1,9 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
-import { redirect } from 'next/navigation'
 import { useAuthStore } from '@/lib/store/auth/authStore'
 
 export default function DashboardLayout({
@@ -12,21 +11,49 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, isLoading } = useAuthStore()
+  const [mounted, setMounted] = useState(false)
 
-  // Redirect to login if not authenticated
+  useEffect(() => {
+    setMounted(true)
+    const hasAuthCookie = document.cookie.includes('auth-token')
+    console.log('DashboardLayout - Auth state:', { 
+      isAuthenticated, 
+      isLoading, 
+      hasAuthCookie,
+      allCookies: document.cookie
+    })
+    if (mounted && !isLoading && !isAuthenticated) {
+      console.log('DashboardLayout - Not authenticated, redirecting to login')
+      window.location.href = '/login'
+    }
+  }, [isAuthenticated, isLoading, mounted])
+  if (!mounted) return null
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-secondary-50 dark:bg-secondary-900">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full mx-auto mb-3"></div>
+          <p className="text-secondary-600 dark:text-secondary-400">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
+
   if (!isAuthenticated) {
-    redirect('/login')
+    return (
+      <div className="h-screen flex items-center justify-center bg-secondary-50 dark:bg-secondary-900">
+        <div className="text-center">
+          <p className="text-secondary-600 dark:text-secondary-400">Redirecting to login...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="flex h-screen bg-secondary-50 dark:bg-secondary-900">
       {/* Sidebar */}
-      {/* <div className="hidden md:flex md:w-64 md:flex-col">
-        <Sidebar />
-      </div> */}
-
-      {/* Mobile sidebar */}
       <Sidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)} 

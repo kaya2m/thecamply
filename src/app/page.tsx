@@ -1,3 +1,5 @@
+// src/app/page.tsx - Update HomePage redirection logic
+
 'use client'
 
 import React, { useEffect, useState } from 'react'
@@ -21,16 +23,15 @@ export default function HomePage() {
       isAuthenticated,
       isLoading,
       mounted,
-      user: user?.username
+      user: user?.username,
+      hasCookie: typeof document !== 'undefined' ? document.cookie.includes('auth-token') : 'N/A'
     })
 
-    // Loading bitene kadar bekle
     if (isLoading) {
       console.log('HomePage: Auth still loading, waiting...')
       return
     }
 
-    // Auth durumuna göre yönlendir
     const timeout = setTimeout(() => {
       if (isAuthenticated) {
         console.log('HomePage: User authenticated, redirecting to feed')
@@ -39,17 +40,15 @@ export default function HomePage() {
         console.log('HomePage: User not authenticated, redirecting to login')
         window.location.href = '/login'
       }
-    }, 100) // Kısa bir gecikme ile state'in tam olarak güncellenmesini bekle
+    }, 500) 
 
     return () => clearTimeout(timeout)
   }, [isAuthenticated, isLoading, mounted, router])
 
-  // Hydration bitmeden hiçbir şey render etme
   if (!mounted) {
     return null
   }
 
-  // Loading state while redirecting
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 dark:from-secondary-900 dark:to-secondary-800 flex items-center justify-center">
       <div className="text-center">
@@ -76,6 +75,7 @@ export default function HomePage() {
           <div className="mt-8 text-xs text-gray-500">
             <p>Debug: Auth={isAuthenticated ? 'true' : 'false'}, Loading={isLoading ? 'true' : 'false'}</p>
             <p>User: {user?.username || 'none'}</p>
+            <p>Cookies: {typeof document !== 'undefined' ? document.cookie : 'N/A'}</p>
           </div>
         )}
       </div>

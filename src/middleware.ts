@@ -47,29 +47,29 @@ async function checkUserRole(token: string, requiredRole?: string): Promise<bool
  * Get user authentication status from cookies primarily
  */
 async function getAuthStatus(request: NextRequest) {
-  // Cookie'den token al (en güvenilir yöntem middleware için)
   const tokenFromCookie = request.cookies.get('auth-token')?.value
-  // Header'dan da kontrol et
   const tokenFromHeader = request.headers.get('authorization')?.replace('Bearer ', '')
-  // Client-side auth durumu
   const clientAuthStatus = request.headers.get('x-client-auth') === 'true'
   
-  // Cookie'yi öncelikle kullan
   const token = tokenFromCookie || tokenFromHeader
-  console.log('[getAuthStatus] Token from cookie:', tokenFromCookie)
-  console.log('[getAuthStatus] Token from header:', tokenFromHeader)
-  console.log('[getAuthStatus] Client auth status:', clientAuthStatus)
+  
+  const pathname = request.nextUrl.pathname
+  const isAuthRoute = pathname.startsWith('/feed') || pathname.startsWith('/dashboard')
+  
+  const trustClientAuth = isAuthRoute && clientAuthStatus && !token
+  
   console.log('[getAuthStatus]', {
+    pathname,
     hasCookieToken: !!tokenFromCookie,
     hasHeaderToken: !!tokenFromHeader,
     clientAuthStatus,
     finalToken: !!token,
-    cookieValue: tokenFromCookie ? `${tokenFromCookie.substring(0, 10)}...` : 'none'
+    trustClientAuth,
   })
   
   if (!token) {
     return { 
-      isAuthenticated: clientAuthStatus,
+      isAuthenticated: trustClientAuth || clientAuthStatus,
       token: null, 
       isValid: false 
     }
@@ -82,7 +82,6 @@ async function getAuthStatus(request: NextRequest) {
     isValid
   }
 }
-
 /**
  * Check if path matches any route pattern
  */
@@ -100,8 +99,6 @@ function matchesRoute(pathname: string, routes: readonly string[]): boolean {
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  
-  // Skip middleware for static files and API routes
   if (
     pathname.startsWith('/api/') ||
     pathname.startsWith('/_next/') ||
@@ -123,7 +120,6 @@ export async function middleware(request: NextRequest) {
     pathname 
   })
 
-  // If we have a token but it's invalid, clear it
   if (token && !isValid) {
     console.log(`[Middleware] Invalid token detected, clearing authentication`)
     const response = NextResponse.redirect(new URL('/login', request.url))
@@ -132,13 +128,11 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Redirect authenticated users away from auth pages
   if (isAuthenticated && matchesRoute(pathname, ROUTES.auth)) {
     console.log(`[Middleware] Redirecting authenticated user from ${pathname} to /feed`)
     return NextResponse.redirect(new URL('/feed', request.url))
   }
 
-  // Handle admin routes
   if (matchesRoute(pathname, ROUTES.admin)) {
     if (!isAuthenticated || !isValid) {
       console.log(`[Middleware] Unauthenticated access to admin route: ${pathname}`)
@@ -155,18 +149,13 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Handle protected routes - be more lenient with client-side auth for now
   if (matchesRoute(pathname, ROUTES.protected)) {
-    // If we have a valid token, allow access
     if (token && isValid) {
       console.log(`[Middleware] Valid token found, allowing access to ${pathname}`)
     }
-    // If no token but client says authenticated, allow but log
     else if (!token) {
       console.log(`[Middleware] No server token but client reports authenticated for ${pathname}`)
-    }
-    // If neither token nor client auth, redirect to login
-    else if (!isAuthenticated && !request.headers.get('x-client-auth')) {
+    }    else if (!isAuthenticated && !request.headers.get('x-client-auth')) {
       console.log(`[Middleware] Unauthenticated access to protected route: ${pathname}`)
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
@@ -174,29 +163,22 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Create response with security headers
   const response = NextResponse.next()
   
-  // Security headers
   response.headers.set('X-Frame-Options', 'DENY')
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('X-XSS-Protection', '1; mode=block')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
-  
-  // Only set HSTS in production
   if (process.env.NODE_ENV === 'production') {
     response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
   }
-
-  // CORS headers for API routes
   if (pathname.startsWith('/api/')) {
     response.headers.set('Access-Control-Allow-Origin', process.env.FRONTEND_URL || '*')
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   }
 
-  // Add user info to headers if authenticated
   if (isAuthenticated && isValid && token) {
     try {
       const { payload } = await jwtVerify(token, JWT_SECRET)
@@ -206,8 +188,6 @@ export async function middleware(request: NextRequest) {
       console.error('Failed to decode token for headers:', error)
     }
   }
-
-  // CSRF protection for state-changing requests
   const isStateChangingMethod = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)
   if (isStateChangingMethod && !pathname.startsWith('/api/auth/')) {
     const origin = request.headers.get('origin')

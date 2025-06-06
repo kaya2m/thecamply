@@ -4,10 +4,8 @@ import { ApiError } from './errors'
 // Cookie utility functions
 const getCookie = (name: string): string | null => {
   if (typeof window === 'undefined') return null
-  
   const nameEQ = name + "="
   const ca = document.cookie.split(';')
-  
   for (let i = 0; i < ca.length; i++) {
     let c = ca[i]
     while (c.charAt(0) === ' ') c = c.substring(1, c.length)
@@ -47,10 +45,8 @@ class ApiClient {
       ...headers,
     }
 
-    // Add authentication token if not skipped - SADECE COOKIE'DEN AL
     if (!skipAuth && typeof window !== 'undefined') {
       const token = getCookie('auth-token')
-      
       if (token) {
         requestHeaders.Authorization = `Bearer ${token}`
         console.log('Adding auth token from cookie to request:', endpoint)
@@ -62,7 +58,7 @@ class ApiClient {
     const requestOptions: RequestInit = {
       method,
       headers: requestHeaders,
-      credentials: 'include', // Cookie'leri otomatik gönder
+      credentials: 'include',
       signal: AbortSignal.timeout(timeout),
     }
 
@@ -71,15 +67,13 @@ class ApiClient {
     }
 
     try {
-      console.log(`[ApiClient] ${method} ${url}`, { 
+      console.log(`[ApiClient] ${method} ${url}`, {
         hasAuth: !!requestHeaders.Authorization,
         skipAuth,
         hasCookie: !!getCookie('auth-token')
       })
-      
       const response = await fetch(url, requestOptions)
       const responseData = await this.parseResponse<T>(response)
-      
       if (!response.ok) {
         console.error(`[ApiClient] Error ${response.status}:`, responseData)
         throw new ApiError(

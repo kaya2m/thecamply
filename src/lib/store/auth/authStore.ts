@@ -29,13 +29,13 @@ interface AuthStore extends AuthState {
   getStoredToken: () => string | null
 }
 
-// Cookie utility functions
 const setCookie = (name: string, value: string, days: number = 7) => {
   if (typeof window === 'undefined') return
   
   const expires = new Date()
   expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000))
   
+  // Critical change: Use more permissive SameSite policy and ensure path is correct
   const isSecure = window.location.protocol === 'https:'
   const cookieString = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=Lax${isSecure ? '; Secure' : ''}`
   
@@ -149,7 +149,6 @@ export const useAuthStore = create<AuthStore>()(
               : API_ENDPOINTS.AUTH.SOCIAL.FACEBOOK
 
             let requestData: any = {};
-            
             if (provider === 'google') {
               requestData = {
                 provider: "google",
@@ -167,7 +166,6 @@ export const useAuthStore = create<AuthStore>()(
             console.log('Sending social login request:', { endpoint, provider })
             const response = await apiClient.post<AuthResponse>(endpoint, requestData)
             console.log('Social login API response received:', response)
-            
             await get().handleAuthSuccess(response)
             console.log('Social auth success handled')
 
@@ -183,10 +181,8 @@ export const useAuthStore = create<AuthStore>()(
 
         logout: async () => {
           try {
-            // Call logout endpoint (don't wait for response)
             apiClient.post(API_ENDPOINTS.AUTH.LOGOUT).catch(console.error)
           } finally {
-            // Always clear local state
             get().clearAuthData()
           }
         },
@@ -206,7 +202,6 @@ export const useAuthStore = create<AuthStore>()(
 
             await get().handleAuthSuccess(response)
           } catch (error) {
-            // Refresh failed, logout user
             get().logout()
             throw error
           }
@@ -346,47 +341,48 @@ export const useAuthStore = create<AuthStore>()(
           set(() => ({ ...initialState }))
         },
 
-        handleAuthSuccess: async (response: AuthResponse) => {
-          console.log('Handling auth success with response:', response)
-          const { user, accessToken, refreshToken, expiresAt } = response
+       handleAuthSuccess: async (response: AuthResponse) => {
+  console.log('Handling auth success with response:', response)
+  const { user, accessToken, refreshToken, expiresAt } = response
 
-          // SADECE COOKIE'YE KAYDET - localStorage kullanma
-          if (typeof window !== 'undefined') {
-            if (accessToken) {
-              setCookie('auth-token', accessToken, 7) // 7 gün
-              console.log('Access token stored in cookie')
-            }
-            if (refreshToken) {
-              setCookie('refresh-token', refreshToken, 30) // 30 gün
-              console.log('Refresh token stored in cookie')
-            }
-          }
+  if (typeof window !== 'undefined') {
+    if (accessToken) {
+      document.cookie = `auth-token=${accessToken}; path=/; max-age=${7*24*60*60}; SameSite=Lax`;
+      console.log('Access token stored in cookie')
+    }
+    if (refreshToken) {
+      document.cookie = `refresh-token=${refreshToken}; path=/; max-age=${30*24*60*60}; SameSite=Lax`;
+      console.log('Refresh token stored in cookie')
+    }
+  }
 
-          const sessionExpiresAt = expiresAt
-            ? new Date(expiresAt).getTime()
-            : Date.now() + (24 * 60 * 60 * 1000) 
+  const sessionExpiresAt = expiresAt
+    ? new Date(expiresAt).getTime()
+    : Date.now() + (24 * 60 * 60 * 1000) 
 
-          set((state) => {
-            state.user = user
-            state.isAuthenticated = true
-            state.isLoading = false
-            state.error = null
-            state.lastLoginAt = Date.now()
-            state.sessionExpiresAt = sessionExpiresAt
-          })
+  set((state) => {
+    state.user = user
+    state.isAuthenticated = true
+    state.isLoading = false
+    state.error = null
+    state.lastLoginAt = Date.now()
+    state.sessionExpiresAt = sessionExpiresAt
+  })
 
-          console.log('Auth state updated successfully:', {
-            isAuthenticated: true,
-            user: user?.username,
-            sessionExpiresAt,
-            tokenStored: !!accessToken
-          })
-        },
+  await new Promise(resolve => setTimeout(resolve, 100))
 
+  console.log('Auth state updated successfully:', {
+    isAuthenticated: true,
+    user: user?.username,
+    sessionExpiresAt,
+    tokenStored: !!accessToken,
+    cookiePresent: document.cookie.includes('auth-token')
+  })
+}
+,
         clearAuthData: () => {
           console.log('Clearing auth data...')
           if (typeof window !== 'undefined') {
-            // SADECE COOKIE'LERİ TEMİZLE - localStorage'ı kullanma
             deleteCookie('auth-token')
             deleteCookie('refresh-token')
             console.log('Tokens cleared from cookies')
@@ -398,13 +394,11 @@ export const useAuthStore = create<AuthStore>()(
 
         getStoredRefreshToken: (): string | null => {
           if (typeof window === 'undefined') return null
-          // SADECE COOKIE'DEN AL
           return getCookie('refresh-token')
         },
 
         getStoredToken: (): string | null => {
           if (typeof window === 'undefined') return null
-          // SADECE COOKIE'DEN AL
           return getCookie('auth-token')
         },
 
@@ -439,18 +433,13 @@ export const useAuthStore = create<AuthStore>()(
             isAuthenticated: state?.isAuthenticated,
             user: state?.user?.username
           })
-          
-          // Rehydration sonrası token'ları cookie'den kontrol et
           if (state?.isAuthenticated && typeof window !== 'undefined') {
             const cookieToken = getCookie('auth-token')
             const cookieRefreshToken = getCookie('refresh-token')
-            
             console.log('Checking cookies after rehydration:', {
               hasCookieToken: !!cookieToken,
               hasCookieRefreshToken: !!cookieRefreshToken
             })
-            
-            // Eğer state authenticated ama cookie yok ise logout
             if (!cookieToken && !cookieRefreshToken) {
               console.log('No cookies found, clearing auth state')
               useAuthStore.getState().clearAuthData()

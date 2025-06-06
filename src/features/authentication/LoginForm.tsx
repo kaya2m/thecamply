@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { 
+import {
   EyeIcon,
   EyeSlashIcon,
   ExclamationTriangleIcon,
@@ -175,109 +175,104 @@ const useSocialAuth = (config: SocialAuthConfig = {}) => {
     }
   }
 
-  const handleGoogleLogin = async () => {
-    if (!(window as any).google?.accounts?.id) {
-      config.onError?.('Google SDK yüklenmedi')
-      return
-    }
-
-    setSocialLoading('google')
-    try {
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
-      if (!clientId) {
-        throw new Error('Google Client ID yapılandırılmamış')
-      }
-      
-      const response = await new Promise<any>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Google giriş zaman aşımı'))
-        }, 30000)
-        
-        ;(window as any).google.accounts.id.initialize({
-          client_id: clientId,
-          callback: (response: any) => {
-            clearTimeout(timeout)
-            if (response.credential) {
-              resolve(response)
-            } else {
-              reject(new Error('Google kimlik bilgisi alınamadı'))
-            }
-          },
-          auto_select: false,
-          cancel_on_tap_outside: true,
-          use_fedcm_for_prompt: true,
-          itp_support: true,
-          context: 'signin',
-          ux_mode: 'popup',
-          login_uri: window.location.origin + '/api/auth/callback'
-        })
-
-        ;(window as any).google.accounts.id.prompt((notification : any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            document.cookie = `g_state=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT`;
-            (window as any).google.accounts.id.prompt()
-          }
-        })
-      })
-      
-      console.log('Google credential received, attempting login...');
-      
-      try {
-        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/social/google`;
-        console.log('Calling API at:', apiUrl);
-        
-        const apiResponse = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            provider: "google",
-            AccessToken: response.credential,
-            idToken: response.credential
-          })
-        });
-        
-        if (!apiResponse.ok) {
-          const errorText = await apiResponse.text();
-          console.error('API Error:', apiResponse.status, errorText);
-          throw new Error(`API Error: ${apiResponse.status} - ${errorText}`);
-        }
-        
-        const data = await apiResponse.json();
-        console.log('API Response:', data);
-        
-        await useAuthStore.getState().handleAuthSuccess(data);
-        
-        const authState = useAuthStore.getState();
-        if (authState.isAuthenticated) {
-          console.log('Authentication successful, triggering callbacks and redirect');
-          config.onSuccess?.()
-          
-          // Yönlendirme mantığını güçlendir
-          const redirectUrl = config.redirectTo || '/feed'
-          console.log('Redirecting to:', redirectUrl)
-          
-          // Önce state güncellemesinin tamamlanmasını bekle
-          await new Promise(resolve => setTimeout(resolve, 100))
-          
-          // Hard navigation
-          window.location.href = redirectUrl
-        } else {
-          throw new Error('Kimlik doğrulama başarısız');
-        }
-      } catch (apiError: any) {
-        console.error('Direct API call failed:', apiError);
-        throw apiError;
-      }
-      
-    } catch (error: any) {
-      console.error('Google giriş hatası:', error)
-      config.onError?.(error.message || 'Google ile giriş yapılamadı')
-    } finally {
-      setSocialLoading(null)
-    }
+ const handleGoogleLogin = async () => {
+  if (!(window as any).google?.accounts?.id) {
+    config.onError?.('Google SDK yüklenmedi')
+    return
   }
+
+  setSocialLoading('google')
+  try {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
+    if (!clientId) {
+      throw new Error('Google Client ID yapılandırılmamış')
+    }
+
+    const response = await new Promise<any>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Google giriş zaman aşımı'))
+      }, 30000)
+
+      ;(window as any).google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (response: any) => {
+          clearTimeout(timeout)
+          if (response.credential) {
+            resolve(response)
+          } else {
+            reject(new Error('Google kimlik bilgisi alınamadı'))
+          }
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true,
+        use_fedcm_for_prompt: true,
+        itp_support: true,
+        context: 'signin',
+        ux_mode: 'popup',
+        login_uri: window.location.origin + '/api/auth/callback'
+      })
+
+      ;(window as any).google.accounts.id.prompt((notification : any) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          document.cookie = `g_state=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT`;
+          (window as any).google.accounts.id.prompt()
+        }
+      })
+    })
+
+    console.log('Google credential received, attempting login...');
+
+    try {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/social/google`;
+      const apiResponse = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          provider: "google",
+          AccessToken: response.credential,
+          idToken: response.credential
+        }),
+        credentials: 'include'
+      });
+      if (!apiResponse.ok) {
+        const errorText = await apiResponse.text();
+        console.error('API Error:', apiResponse.status, errorText);
+        throw new Error(`API Error: ${apiResponse.status} - ${errorText}`);
+      }
+
+      const data = await apiResponse.json();
+      console.log('API Response:', data);
+
+      await useAuthStore.getState().handleAuthSuccess(data);
+
+      const authState = useAuthStore.getState();
+      console.log('Auth state after login:', authState);
+      console.log('Cookies present:', document.cookie.includes('auth-token'));
+
+      if (authState.isAuthenticated) {
+        console.log('Authentication successful, triggering callbacks and redirect');
+        config.onSuccess?.()
+
+        setTimeout(() => {
+          window.location.href = config.redirectTo || '/feed';
+        }, 500);
+      } else {
+        throw new Error('Kimlik doğrulama başarısız');
+      }
+    } catch (apiError: any) {
+      console.error('Direct API call failed:', apiError);
+      throw apiError;
+    }
+
+  } catch (error: any) {
+    console.error('Google giriş hatası:', error)
+    config.onError?.(error.message || 'Google ile giriş yapılamadı')
+  } finally {
+    setSocialLoading(null)
+  }
+}
 
   const handleFacebookLogin = async () => {
     if (!(window as any).FB) {
@@ -406,14 +401,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     setError,
   } = useForm<LoginCredentials>()
 
-  // Authentication durumunu takip et
   useEffect(() => {
     console.log('Auth state changed:', { isAuthenticated, redirectTo })
     if (isAuthenticated) {
       console.log('User is authenticated, redirecting...')
       onSuccess?.()
-      
-      // Timeout ile yönlendirme yap
       setTimeout(() => {
         window.location.href = redirectTo
       }, 100)
@@ -441,38 +433,37 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     redirectTo
   })
 
-  const onSubmit = async (data: LoginCredentials) => {
-    try {
-      console.log('Starting login process...')
-      clearError()
-      setFormError(null)
+const onSubmit = async (data: LoginCredentials) => {
+  try {
+    console.log('Starting login process...')
+    clearError()
+    setFormError(null)
+    
+    await login(data)
+    
+    console.log('Login completed, checking auth state...')
+    const authState = useAuthStore.getState()
+    console.log('Auth state after login:', authState)
+    
+    if (authState.isAuthenticated) {
+      console.log('User authenticated, calling onSuccess and redirecting')
+      onSuccess?.()
       
-      await login(data)
-      
-      console.log('Login completed, checking auth state...')
-      const authState = useAuthStore.getState()
-      console.log('Auth state after login:', authState)
-      
-      if (authState.isAuthenticated) {
-        console.log('User authenticated, calling onSuccess and redirecting')
-        onSuccess?.()
-        
-        // Yönlendirmeyi güçlendir
-        setTimeout(() => {
-          console.log('Executing redirect to:', redirectTo)
-          window.location.href = redirectTo
-        }, 100)
-      }
-    } catch (error: any) {
-      console.error('Login error:', error)
-      if (error?.field) {
-        setError(error.field, { message: error.message })
-      } else {
-        setFormError(error.message || 'Giriş yapılamadı')
-      }
+      setTimeout(() => {
+        console.log('Cookies present before redirect:', document.cookie.includes('auth-token'))
+        console.log('Executing redirect to:', redirectTo)
+        window.location.href = redirectTo
+      }, 500)
+    }
+  } catch (error: any) {
+    console.error('Login error:', error)
+    if (error?.field) {
+      setError(error.field, { message: error.message })
+    } else {
+      setFormError(error.message || 'Giriş yapılamadı')
     }
   }
-
+}
   const handleForgotPassword = () => {
     router.push('/auth/forgot-password')
   }
@@ -535,10 +526,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               <div className="flex items-center justify-center space-x-3">
                 {socialLoading !== 'google' && <GoogleIcon />}
                 <span>
-                  {sdkStatus.loading 
+                  {sdkStatus.loading
                     ? 'Google SDK yükleniyor...'
-                    : !isGoogleReady 
-                      ? 'Google SDK hazır değil' 
+                    : !isGoogleReady
+                      ? 'Google SDK hazır değil'
                       : 'Google ile giriş yap'
                   }
                 </span>
@@ -557,10 +548,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               <div className="flex items-center justify-center space-x-3">
                 {socialLoading !== 'facebook' && <FacebookIcon />}
                 <span>
-                  {sdkStatus.loading 
+                  {sdkStatus.loading
                     ? 'Facebook SDK yükleniyor...'
-                    : !isFacebookReady 
-                      ? 'Facebook SDK hazır değil' 
+                    : !isFacebookReady
+                      ? 'Facebook SDK hazır değil'
                       : 'Facebook ile giriş yap'
                   }
                 </span>

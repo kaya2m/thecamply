@@ -81,7 +81,6 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     }
 
     await createPost(postData)
-    
     if (!useFeedStore.getState().error) {
       reset()
       setSelectedImages([])
@@ -258,7 +257,6 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             <button
               type="button"
               onClick={() => {
-                // In a real app, this would open a location picker
                 setLocation({
                   name: 'Antalya, Turkey',
                   coordinates: [36.8969, 30.7133]
