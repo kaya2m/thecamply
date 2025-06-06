@@ -23,7 +23,7 @@ interface SocialSDKStatus {
 interface SocialAuthConfig {
   onSuccess?: () => void
   onError?: (error: string) => void
-  redirectTo?: string
+  redirectTo?: string 
 }
 
 const GoogleIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
@@ -187,7 +187,6 @@ const useSocialAuth = (config: SocialAuthConfig = {}) => {
         throw new Error('Google Client ID yapılandırılmamış')
       }
       
-      // Get Google credential token
       const response = await new Promise<any>((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Google giriş zaman aşımı'))
@@ -248,13 +247,10 @@ const useSocialAuth = (config: SocialAuthConfig = {}) => {
         const data = await apiResponse.json();
         console.log('API Response:', data);
         
-        // Use the auth store to handle the successful response
-        console.log('Google login successful, handling auth data');
         await useAuthStore.getState().handleAuthSuccess(data);
         
         const authState = useAuthStore.getState();
         if (authState.isAuthenticated) {
-          console.log('User authenticated, performing navigation');
           config.onSuccess?.()
           if (config.redirectTo) {
             router.push(config.redirectTo)
@@ -323,7 +319,7 @@ const useSocialAuth = (config: SocialAuthConfig = {}) => {
       if (authState.isAuthenticated) {
         config.onSuccess?.()
         if (config.redirectTo) {
-          router.push(config.redirectTo)
+          router.push('/feed')
         }
       } else {
         throw new Error('Kimlik doğrulama başarısız')
@@ -392,7 +388,7 @@ interface LoginFormProps {
 
 export const LoginForm: React.FC<LoginFormProps> = ({
   onSuccess,
-  redirectTo = '/dashboard',
+  redirectTo = '/feed',
   showSocialLogin = true,
   showRememberMe = true,
   showForgotPassword = true,

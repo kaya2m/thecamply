@@ -3,7 +3,6 @@
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/shared/stores/authStore'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { 
@@ -11,6 +10,7 @@ import {
   EyeSlashIcon
 } from '@heroicons/react/24/outline'
 import type { RegisterData } from '@/shared/types/user'
+import { useAuthStore } from '@/lib/store/auth/authStore'
 
 interface RegisterFormProps {
   onSuccess?: () => void

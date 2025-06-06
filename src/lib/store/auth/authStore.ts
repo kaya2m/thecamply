@@ -302,12 +302,12 @@ export const useAuthStore = create<AuthStore>()(
           set(() => ({ ...initialState }))
         },
         handleAuthSuccess: async (response: AuthResponse) => {
-          const { user, token, refreshToken, expiresAt } = response
+          const { user, accessToken, refreshToken, expiresAt } = response
 
           // Store tokens securely
           if (typeof window !== 'undefined') {
-            if (token) {
-              localStorage.setItem('auth-token', token)
+            if (accessToken) {
+              localStorage.setItem('auth-token', accessToken)
             }
             if (refreshToken) {
               localStorage.setItem('refresh-token', refreshToken)
@@ -421,45 +421,3 @@ useAuthStore.subscribe((state, prevState) => {
     setupTokenRefresh()
   }
 })
-/*
-// 1. Using in a component
-const LoginComponent = () => {
-  const { login, isLoading, error } = useAuth()
-  
-  const handleSubmit = async (data: LoginFormData) => {
-    await login(data)
-  }
-  
-  return (
-    <form onSubmit={handleSubmit}>
-      {error && <div>{error}</div>}
-      <button disabled={isLoading}>
-        {isLoading ? 'Logging in...' : 'Login'}
-      </button>
-    </form>
-  )
-}
-
-// 2. Using selectors for performance
-const UserProfile = () => {
-  const user = useAuthUser() // Only re-renders when user changes
-  return <div>{user?.firstName}</div>
-}
-
-// 3. Using AuthGuard
-const ProtectedPage = () => (
-  <AuthGuard requireAuth>
-    <DashboardContent />
-  </AuthGuard>
-)
-
-// 4. Using in middleware
-export async function middleware(request: NextRequest) {
-  // Check if user is authenticated
-  const token = request.cookies.get('auth-token')
-  
-  if (!token && protectedRoutes.includes(request.nextUrl.pathname)) {
-    return NextResponse.redirect('/login')
-  }
-}
-*/

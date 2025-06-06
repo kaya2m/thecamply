@@ -107,13 +107,13 @@ class ApiClient {
     endpoint: string,
     data?: unknown,
     config?: Omit<RequestConfig, 'method'>
-  ): Promise<T> {
+  ): Promise<any> {
     const response = await this.request<T>(endpoint, {
       ...config,
       method: 'POST',
       data
     })
-    return response.data
+    return response
   }
 
   async put<T = unknown>(
