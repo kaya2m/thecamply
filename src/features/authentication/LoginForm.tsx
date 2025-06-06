@@ -186,10 +186,13 @@ const useSocialAuth = (config: SocialAuthConfig = {}) => {
       if (!clientId) {
         throw new Error('Google Client ID yapılandırılmamış')
       }
+      
+      // Get Google credential token
       const response = await new Promise<any>((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Google giriş zaman aşımı'))
         }, 30000)
+        
         ;(window as any).google.accounts.id.initialize({
           client_id: clientId,
           callback: (response: any) => {
@@ -200,34 +203,74 @@ const useSocialAuth = (config: SocialAuthConfig = {}) => {
               reject(new Error('Google kimlik bilgisi alınamadı'))
             }
           },
-        auto_select: false,
-        cancel_on_tap_outside: true,
-        use_fedcm_for_prompt: true,
-        itp_support: true,
-        context: 'signin',
-        ux_mode: 'popup',
-        login_uri: window.location.origin + '/auth/google/callback'
+          auto_select: false,
+          cancel_on_tap_outside: true,
+          use_fedcm_for_prompt: true,
+          itp_support: true,
+          context: 'signin',
+          ux_mode: 'popup',
+          login_uri: window.location.origin + '/api/auth/callback'
         })
 
         ;(window as any).google.accounts.id.prompt((notification : any) => {
-            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                document.cookie =  `g_state=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT`;
-                (window as any).google.accounts.id.prompt()
-            }
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            document.cookie = `g_state=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT`;
+            (window as any).google.accounts.id.prompt()
+          }
         })
       })
-
-      await socialLogin('google', response.credential)
-      const authState = useAuthStore.getState()
-      if (authState.isAuthenticated) {
-        config.onSuccess?.()
-        if (config.redirectTo) {
-          router.push(config.redirectTo)
+      
+      console.log('Google credential received, attempting login...');
+      
+      // Call the API directly to debug the issue
+      try {
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/social/google`;
+        console.log('Calling API directly at:', apiUrl);
+        
+        const apiResponse = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            provider: "google",
+            AccessToken: response.credential,
+            idToken: response.credential
+          })
+        });
+        
+        if (!apiResponse.ok) {
+          const errorText = await apiResponse.text();
+          console.error('API Error:', apiResponse.status, errorText);
+          throw new Error(`API Error: ${apiResponse.status} - ${errorText}`);
         }
-      } else {
-        throw new Error('Kimlik doğrulama başarısız')
+        
+        const data = await apiResponse.json();
+        console.log('API Response:', data);
+        
+        // Use the auth store to handle the successful response
+        console.log('Google login successful, handling auth data');
+        await useAuthStore.getState().handleAuthSuccess(data);
+        
+        const authState = useAuthStore.getState();
+        if (authState.isAuthenticated) {
+          console.log('User authenticated, performing navigation');
+          config.onSuccess?.()
+          if (config.redirectTo) {
+            router.push(config.redirectTo)
+          }
+           else {
+            console.log('No redirectTo specified, using default dashboard path');
+            router.push('/dashboard');
+          }
+        } else {
+          throw new Error('Kimlik doğrulama başarısız');
+        }
+      } catch (apiError: any) {
+        console.error('Direct API call failed:', apiError);
+        throw apiError;
       }
-
+      
     } catch (error: any) {
       console.error('Google giriş hatası:', error)
       config.onError?.(error.message || 'Google ile giriş yapılamadı')
