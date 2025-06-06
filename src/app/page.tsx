@@ -1,20 +1,53 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store/auth/authStore'
 
 export default function HomePage() {
   const router = useRouter()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, isLoading, user } = useAuthStore()
+  const [mounted, setMounted] = useState(false)
+
+  // Hydration'ı bekle
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/feed')
-    } else {
-      router.push('/login')
+    if (!mounted) return
+
+    console.log('HomePage: Checking auth state...', {
+      isAuthenticated,
+      isLoading,
+      mounted,
+      user: user?.username
+    })
+
+    // Loading bitene kadar bekle
+    if (isLoading) {
+      console.log('HomePage: Auth still loading, waiting...')
+      return
     }
-  }, [isAuthenticated, router])
+
+    // Auth durumuna göre yönlendir
+    const timeout = setTimeout(() => {
+      if (isAuthenticated) {
+        console.log('HomePage: User authenticated, redirecting to feed')
+        window.location.href = '/feed'
+      } else {
+        console.log('HomePage: User not authenticated, redirecting to login')
+        window.location.href = '/login'
+      }
+    }, 100) // Kısa bir gecikme ile state'in tam olarak güncellenmesini bekle
+
+    return () => clearTimeout(timeout)
+  }, [isAuthenticated, isLoading, mounted, router])
+
+  // Hydration bitmeden hiçbir şey render etme
+  if (!mounted) {
+    return null
+  }
 
   // Loading state while redirecting
   return (
@@ -29,13 +62,22 @@ export default function HomePage() {
             The<span className="text-primary-600">Camply</span>
           </h1>
         </div>
+        
         {/* Loading */}
         <div className="flex items-center justify-center space-x-2">
           <div className="animate-spin w-6 h-6 border-4 border-primary-600 border-t-transparent rounded-full"></div>
           <p className="text-secondary-600 dark:text-secondary-400">
-            Yönlendiriliyor...
+            {isLoading ? 'Yükleniyor...' : 'Yönlendiriliyor...'}
           </p>
         </div>
+
+        {/* Debug info in development */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-8 text-xs text-gray-500">
+            <p>Debug: Auth={isAuthenticated ? 'true' : 'false'}, Loading={isLoading ? 'true' : 'false'}</p>
+            <p>User: {user?.username || 'none'}</p>
+          </div>
+        )}
       </div>
     </div>
   )

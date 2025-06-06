@@ -7,8 +7,6 @@ import { API_ENDPOINTS } from '@/lib/api/endpoints'
 import { ApiError } from '@/lib/api/errors'
 import { AuthResponse, AuthState, LoginFormData, RegisterFormData, SocialLoginRequest, User } from '@/lib/types/auth'
 
-
-
 interface AuthStore extends AuthState {
   login: (credentials: LoginFormData) => Promise<void>
   register: (data: RegisterFormData) => Promise<void>
@@ -25,10 +23,44 @@ interface AuthStore extends AuthState {
   setLoading: (loading: boolean) => void
   reset: () => void
 
-  // Add missing methods
   handleAuthSuccess: (response: AuthResponse) => Promise<void>
   clearAuthData: () => void
   getStoredRefreshToken: () => string | null
+  getStoredToken: () => string | null
+}
+
+// Cookie utility functions
+const setCookie = (name: string, value: string, days: number = 7) => {
+  if (typeof window === 'undefined') return
+  
+  const expires = new Date()
+  expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000))
+  
+  const isSecure = window.location.protocol === 'https:'
+  const cookieString = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=Lax${isSecure ? '; Secure' : ''}`
+  
+  document.cookie = cookieString
+  console.log(`Cookie set: ${name}`, { expires: expires.toUTCString(), secure: isSecure })
+}
+
+const getCookie = (name: string): string | null => {
+  if (typeof window === 'undefined') return null
+  
+  const nameEQ = name + "="
+  const ca = document.cookie.split(';')
+  
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i]
+    while (c.charAt(0) === ' ') c = c.substring(1, c.length)
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
+  }
+  return null
+}
+
+const deleteCookie = (name: string) => {
+  if (typeof window === 'undefined') return
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`
+  console.log(`Cookie deleted: ${name}`)
 }
 
 const initialState: AuthState = {
@@ -45,6 +77,7 @@ export const useAuthStore = create<AuthStore>()(
     persist(
       immer((set, get) => ({
         ...initialState,
+        
         login: async (credentials: LoginFormData) => {
           set((state) => {
             state.isLoading = true
@@ -52,6 +85,7 @@ export const useAuthStore = create<AuthStore>()(
           })
 
           try {
+            console.log('Sending login request...')
             const response = await apiClient.post<AuthResponse>(
               API_ENDPOINTS.AUTH.LOGIN,
               {
@@ -60,9 +94,12 @@ export const useAuthStore = create<AuthStore>()(
               }
             )
 
+            console.log('Login API response received:', response)
             await get().handleAuthSuccess(response)
+            console.log('Auth success handled, authentication state updated')
 
           } catch (error) {
+            console.error('Login failed:', error)
             set((state) => {
               state.error = error instanceof ApiError ? error.message : 'Login failed'
               state.isLoading = false
@@ -127,10 +164,15 @@ export const useAuthStore = create<AuthStore>()(
               };
             }
 
+            console.log('Sending social login request:', { endpoint, provider })
             const response = await apiClient.post<AuthResponse>(endpoint, requestData)
+            console.log('Social login API response received:', response)
+            
             await get().handleAuthSuccess(response)
+            console.log('Social auth success handled')
 
           } catch (error) {
+            console.error('Social login failed:', error)
             set((state) => {
               state.error = error instanceof ApiError ? error.message : `${provider} login failed`
               state.isLoading = false
@@ -287,11 +329,13 @@ export const useAuthStore = create<AuthStore>()(
             throw error
           }
         },
+
         clearError: () => {
           set((state) => {
             state.error = null
           })
         },
+
         setLoading: (loading: boolean) => {
           set((state) => {
             state.isLoading = loading
@@ -301,22 +345,27 @@ export const useAuthStore = create<AuthStore>()(
         reset: () => {
           set(() => ({ ...initialState }))
         },
+
         handleAuthSuccess: async (response: AuthResponse) => {
+          console.log('Handling auth success with response:', response)
           const { user, accessToken, refreshToken, expiresAt } = response
 
-          // Store tokens securely
+          // SADECE COOKIE'YE KAYDET - localStorage kullanma
           if (typeof window !== 'undefined') {
             if (accessToken) {
-              localStorage.setItem('auth-token', accessToken)
+              setCookie('auth-token', accessToken, 7) // 7 gün
+              console.log('Access token stored in cookie')
             }
             if (refreshToken) {
-              localStorage.setItem('refresh-token', refreshToken)
+              setCookie('refresh-token', refreshToken, 30) // 30 gün
+              console.log('Refresh token stored in cookie')
             }
           }
 
           const sessionExpiresAt = expiresAt
             ? new Date(expiresAt).getTime()
             : Date.now() + (24 * 60 * 60 * 1000) 
+
           set((state) => {
             state.user = user
             state.isAuthenticated = true
@@ -325,25 +374,38 @@ export const useAuthStore = create<AuthStore>()(
             state.lastLoginAt = Date.now()
             state.sessionExpiresAt = sessionExpiresAt
           })
+
+          console.log('Auth state updated successfully:', {
+            isAuthenticated: true,
+            user: user?.username,
+            sessionExpiresAt,
+            tokenStored: !!accessToken
+          })
         },
 
         clearAuthData: () => {
+          console.log('Clearing auth data...')
           if (typeof window !== 'undefined') {
-            localStorage.removeItem('auth-token')
-            localStorage.removeItem('refresh-token')
+            // SADECE COOKIE'LERİ TEMİZLE - localStorage'ı kullanma
+            deleteCookie('auth-token')
+            deleteCookie('refresh-token')
+            console.log('Tokens cleared from cookies')
           }
 
           set(() => ({ ...initialState }))
+          console.log('Auth data cleared')
         },
 
         getStoredRefreshToken: (): string | null => {
           if (typeof window === 'undefined') return null
-          return localStorage.getItem('refresh-token')
+          // SADECE COOKIE'DEN AL
+          return getCookie('refresh-token')
         },
 
         getStoredToken: (): string | null => {
           if (typeof window === 'undefined') return null
-          return localStorage.getItem('auth-token')
+          // SADECE COOKIE'DEN AL
+          return getCookie('auth-token')
         },
 
         isSessionExpired: (): boolean => {
@@ -372,6 +434,29 @@ export const useAuthStore = create<AuthStore>()(
           }
           return persistedState
         },
+        onRehydrateStorage: () => (state) => {
+          console.log('Auth store rehydrated:', {
+            isAuthenticated: state?.isAuthenticated,
+            user: state?.user?.username
+          })
+          
+          // Rehydration sonrası token'ları cookie'den kontrol et
+          if (state?.isAuthenticated && typeof window !== 'undefined') {
+            const cookieToken = getCookie('auth-token')
+            const cookieRefreshToken = getCookie('refresh-token')
+            
+            console.log('Checking cookies after rehydration:', {
+              hasCookieToken: !!cookieToken,
+              hasCookieRefreshToken: !!cookieRefreshToken
+            })
+            
+            // Eğer state authenticated ama cookie yok ise logout
+            if (!cookieToken && !cookieRefreshToken) {
+              console.log('No cookies found, clearing auth state')
+              useAuthStore.getState().clearAuthData()
+            }
+          }
+        }
       }
     ),
     {

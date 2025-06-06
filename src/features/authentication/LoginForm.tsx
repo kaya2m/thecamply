@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline'
 import type { LoginCredentials } from '@/shared/types/user'
 import { useAuthStore } from '@/lib/store/auth/authStore'
+
 interface SocialSDKStatus {
   google: boolean
   facebook: boolean
@@ -221,10 +222,9 @@ const useSocialAuth = (config: SocialAuthConfig = {}) => {
       
       console.log('Google credential received, attempting login...');
       
-      // Call the API directly to debug the issue
       try {
         const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/social/google`;
-        console.log('Calling API directly at:', apiUrl);
+        console.log('Calling API at:', apiUrl);
         
         const apiResponse = await fetch(apiUrl, {
           method: 'POST',
@@ -251,14 +251,18 @@ const useSocialAuth = (config: SocialAuthConfig = {}) => {
         
         const authState = useAuthStore.getState();
         if (authState.isAuthenticated) {
+          console.log('Authentication successful, triggering callbacks and redirect');
           config.onSuccess?.()
-          if (config.redirectTo) {
-            router.push(config.redirectTo)
-          }
-           else {
-            console.log('No redirectTo specified, using default dashboard path');
-            router.push('/dashboard');
-          }
+          
+          // Yönlendirme mantığını güçlendir
+          const redirectUrl = config.redirectTo || '/feed'
+          console.log('Redirecting to:', redirectUrl)
+          
+          // Önce state güncellemesinin tamamlanmasını bekle
+          await new Promise(resolve => setTimeout(resolve, 100))
+          
+          // Hard navigation
+          window.location.href = redirectUrl
         } else {
           throw new Error('Kimlik doğrulama başarısız');
         }
@@ -318,9 +322,8 @@ const useSocialAuth = (config: SocialAuthConfig = {}) => {
       const authState = useAuthStore.getState()
       if (authState.isAuthenticated) {
         config.onSuccess?.()
-        if (config.redirectTo) {
-          router.push('/feed')
-        }
+        const redirectUrl = config.redirectTo || '/feed'
+        window.location.href = redirectUrl
       } else {
         throw new Error('Kimlik doğrulama başarısız')
       }
@@ -333,21 +336,18 @@ const useSocialAuth = (config: SocialAuthConfig = {}) => {
     }
   }
 
-  // SDK'ları yeniden yükle
   const reloadSDKs = () => {
     setSdkStatus({ google: false, facebook: false, loading: true })
     setInitError(null)
     loadSDKs()
   }
 
-  // İlk yükleme
   useEffect(() => {
     if (typeof window !== 'undefined') {
       loadSDKs()
     }
   }, [])
 
-  // Periyodik kontrol
   useEffect(() => {
     if (sdkStatus.loading) {
       const interval = setInterval(checkSDKStatus, 1000)
@@ -375,7 +375,6 @@ const useSocialAuth = (config: SocialAuthConfig = {}) => {
   }
 }
 
-// Ana LoginForm komponenti
 interface LoginFormProps {
   onSuccess?: () => void
   redirectTo?: string
@@ -396,7 +395,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   className,
 }) => {
   const router = useRouter()
-  const { login, isLoading, error, clearError } = useAuthStore()
+  const { login, isLoading, error, clearError, isAuthenticated } = useAuthStore()
   const [showPassword, setShowPassword] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   
@@ -407,7 +406,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     setError,
   } = useForm<LoginCredentials>()
 
-  // Enhanced social auth
+  // Authentication durumunu takip et
+  useEffect(() => {
+    console.log('Auth state changed:', { isAuthenticated, redirectTo })
+    if (isAuthenticated) {
+      console.log('User is authenticated, redirecting...')
+      onSuccess?.()
+      
+      // Timeout ile yönlendirme yap
+      setTimeout(() => {
+        window.location.href = redirectTo
+      }, 100)
+    }
+  }, [isAuthenticated, redirectTo, onSuccess])
+
   const {
     sdkStatus,
     socialLoading,
@@ -418,23 +430,41 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     isGoogleReady,
     isFacebookReady
   } = useSocialAuth({
-    onSuccess,
-    onError: (error) => setFormError(error),
+    onSuccess: () => {
+      console.log('Social login success callback triggered')
+      onSuccess?.()
+    },
+    onError: (error) => {
+      console.error('Social login error:', error)
+      setFormError(error)
+    },
     redirectTo
   })
 
   const onSubmit = async (data: LoginCredentials) => {
     try {
+      console.log('Starting login process...')
       clearError()
       setFormError(null)
+      
       await login(data)
       
+      console.log('Login completed, checking auth state...')
       const authState = useAuthStore.getState()
+      console.log('Auth state after login:', authState)
+      
       if (authState.isAuthenticated) {
+        console.log('User authenticated, calling onSuccess and redirecting')
         onSuccess?.()
-        router.push(redirectTo)
+        
+        // Yönlendirmeyi güçlendir
+        setTimeout(() => {
+          console.log('Executing redirect to:', redirectTo)
+          window.location.href = redirectTo
+        }, 100)
       }
     } catch (error: any) {
+      console.error('Login error:', error)
       if (error?.field) {
         setError(error.field, { message: error.message })
       } else {
@@ -447,7 +477,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     router.push('/auth/forgot-password')
   }
 
-  // SDK Error Message Component
   const SDKErrorMessage = () => {
     if (!initError) return null
 
@@ -474,7 +503,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     )
   }
 
-  // Social Login Section
   const SocialLoginSection = () => {
     if (!showSocialLogin) return null
 
@@ -496,7 +524,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     return (
       <>
         <div className="space-y-3 mb-6">
-          {/* Google Login */}
           {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
             <SocialButton
               provider="google"
@@ -519,7 +546,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </SocialButton>
           )}
 
-          {/* Facebook Login */}
           {process.env.NEXT_PUBLIC_FACEBOOK_APP_ID && (
             <SocialButton
               provider="facebook"
@@ -543,7 +569,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           )}
         </div>
 
-        {/* Divider */}
         <div className="relative mb-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-secondary-200 dark:border-secondary-700"></div>
@@ -560,7 +585,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
   const FormContent = () => (
     <>
-      {/* Form Header */}
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-secondary-900 dark:text-secondary-100 mb-2">
           Hoş Geldin!
@@ -570,10 +594,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         </p>
       </div>
 
-      {/* SDK Error Message */}
       <SDKErrorMessage />
 
-      {/* Error Messages */}
       {(error || formError) && (
         <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 dark:bg-red-900/50 dark:border-red-800">
           <div className="flex items-start space-x-3">
@@ -585,12 +607,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         </div>
       )}
 
-      {/* Social Login Section */}
       <SocialLoginSection />
 
-      {/* Email/Password Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-        {/* Email */}
         <Input
           label="E-posta"
           type="email"
@@ -606,7 +625,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           })}
         />
 
-        {/* Password */}
         <div className="relative">
           <Input
             label="Şifre"
@@ -636,7 +654,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           </button>
         </div>
 
-        {/* Remember Me & Forgot Password */}
         <div className="flex items-center justify-between">
           {showRememberMe && (
             <label className="flex items-center cursor-pointer">
@@ -661,7 +678,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           )}
         </div>
 
-        {/* Submit Button */}
         <Button
           type="submit"
           fullWidth
@@ -675,7 +691,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         </Button>
       </form>
 
-      {/* Sign Up Link */}
       <div className="mt-6 text-center">
         <p className="text-sm text-secondary-600 dark:text-secondary-400">
           Hesabın yok mu?{' '}
@@ -689,7 +704,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         </p>
       </div>
 
-      {/* Debug Info (sadece development'ta) */}
       {process.env.NODE_ENV === 'development' && (
         <details className="mt-8 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg text-xs">
           <summary className="cursor-pointer font-medium text-gray-600 dark:text-gray-400">
@@ -697,6 +711,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           </summary>
           <pre className="mt-2 text-gray-500 dark:text-gray-500 overflow-x-auto">
             {JSON.stringify({
+              isAuthenticated,
+              redirectTo,
               sdkStatus,
               initError,
               socialLoading,
@@ -725,4 +741,3 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     </div>
   )
 }
-

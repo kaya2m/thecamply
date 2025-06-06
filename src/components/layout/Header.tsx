@@ -14,11 +14,11 @@ import {
   ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline'
 import { Menu, Transition } from '@headlessui/react'
-import { useAuthStore } from '@/shared/stores/authStore'
 import { Avatar } from '@/components/ui/Avatar'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/shared/utils/cn'
+import { useAuthStore } from '@/lib/store/auth/authStore'
 
 interface HeaderProps {
   onMenuClick?: () => void

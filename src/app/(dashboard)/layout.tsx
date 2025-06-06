@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useAuthStore } from '@/shared/stores/authStore'
 import { Header } from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { redirect } from 'next/navigation'
+import { useAuthStore } from '@/lib/store/auth/authStore'
 
 export default function DashboardLayout({
   children,

@@ -1,6 +1,21 @@
 import { ApiResponse, RequestConfig } from '../types/api'
 import { ApiError } from './errors'
 
+// Cookie utility functions
+const getCookie = (name: string): string | null => {
+  if (typeof window === 'undefined') return null
+  
+  const nameEQ = name + "="
+  const ca = document.cookie.split(';')
+  
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i]
+    while (c.charAt(0) === ' ') c = c.substring(1, c.length)
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
+  }
+  return null
+}
+
 class ApiClient {
   private readonly baseURL: string
   private readonly timeout: number
@@ -31,16 +46,23 @@ class ApiClient {
       'Content-Type': 'application/json',
       ...headers,
     }
+
+    // Add authentication token if not skipped - SADECE COOKIE'DEN AL
     if (!skipAuth && typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth-token')
+      const token = getCookie('auth-token')
+      
       if (token) {
         requestHeaders.Authorization = `Bearer ${token}`
+        console.log('Adding auth token from cookie to request:', endpoint)
+      } else {
+        console.log('No auth token found in cookie for request:', endpoint)
       }
     }
 
     const requestOptions: RequestInit = {
       method,
       headers: requestHeaders,
+      credentials: 'include', // Cookie'leri otomatik gönder
       signal: AbortSignal.timeout(timeout),
     }
 
@@ -49,9 +71,17 @@ class ApiClient {
     }
 
     try {
+      console.log(`[ApiClient] ${method} ${url}`, { 
+        hasAuth: !!requestHeaders.Authorization,
+        skipAuth,
+        hasCookie: !!getCookie('auth-token')
+      })
+      
       const response = await fetch(url, requestOptions)
       const responseData = await this.parseResponse<T>(response)
+      
       if (!response.ok) {
+        console.error(`[ApiClient] Error ${response.status}:`, responseData)
         throw new ApiError(
           responseData.message || `HTTP ${response.status}`,
           response.status,
@@ -59,6 +89,7 @@ class ApiClient {
         )
       }
 
+      console.log(`[ApiClient] Success ${response.status}:`, endpoint)
       return responseData
     } catch (error) {
       if (error instanceof ApiError) {
@@ -73,6 +104,7 @@ class ApiClient {
         throw new ApiError('Network error', 0)
       }
 
+      console.error('[ApiClient] Unknown error:', error)
       throw new ApiError('Unknown error', 500, error)
     }
   }
@@ -152,6 +184,7 @@ class ApiClient {
     })
     return response.data
   }
+
   async upload<T = unknown>(
     endpoint: string,
     formData: FormData,

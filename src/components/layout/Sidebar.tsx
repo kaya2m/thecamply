@@ -23,9 +23,9 @@ import {
   BellIcon as BellIconSolid,
   ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid
 } from '@heroicons/react/24/solid'
-import { useAuthStore } from '@/shared/stores/authStore'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/shared/utils/cn'
+import { useAuthStore } from '@/lib/store/auth/authStore'
 
 interface NavigationItem {
   name: string
@@ -96,8 +96,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClose
 }) => {
   const pathname = usePathname()
+  
   const { isAuthenticated, user } = useAuthStore()
 
+  debugger
   const filteredNavigation = navigation.filter(item => 
     !item.requiresAuth || isAuthenticated
   )
@@ -192,11 +194,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onClick={onClose}
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-white font-semibold">
-                  {user.firstName[0]}{user.lastName[0]}
+                  {user.username}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-secondary-900 dark:text-secondary-100 truncate">
-                    {user.firstName} {user.lastName}
+                    {user.username}
                   </p>
                   <p className="text-xs text-secondary-500 dark:text-secondary-400 truncate">
                     @{user.username}

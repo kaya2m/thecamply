@@ -11,13 +11,13 @@ import {
   LockClosedIcon
 } from '@heroicons/react/24/outline'
 import { useFeedStore } from '@/shared/stores/feedStore'
-import { useAuthStore } from '@/shared/stores/authStore'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Avatar } from '@/components/ui/Avatar'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/shared/utils/cn'
 import type { CreatePostData } from '@/shared/types/post'
+import { useAuthStore } from '@/lib/store/auth/authStore'
 
 interface CreatePostFormProps {
   isOpen: boolean
