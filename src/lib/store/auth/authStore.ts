@@ -111,10 +111,20 @@ export const useAuthStore = create<AuthStore>()(
               ? API_ENDPOINTS.AUTH.SOCIAL.GOOGLE
               : API_ENDPOINTS.AUTH.SOCIAL.FACEBOOK
 
-            const requestData: SocialLoginRequest = {
-              provider,
-              accessToken,
-              ...(idToken && { idToken }),
+            let requestData: any = {};
+            
+            if (provider === 'google') {
+              requestData = {
+                provider: "google",
+                accessToken: accessToken || "",
+                idToken: idToken || ""
+              };
+            } else {
+              requestData = {
+                provider,
+                accessToken,
+                ...(idToken && { idToken }),
+              };
             }
 
             const response = await apiClient.post<AuthResponse>(endpoint, requestData)
