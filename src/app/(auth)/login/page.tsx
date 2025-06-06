@@ -1,7 +1,6 @@
 import React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { LoginForm } from '@/features/authentication/LoginForm'
 import { Logo } from '@/components/ui/Logo'
 import {
   UserGroupIcon,
@@ -9,6 +8,7 @@ import {
   MapPinIcon,
   HeartIcon
 } from '@heroicons/react/24/outline'
+import { LoginForm } from '@/features/authentication/LoginForm'
 
 export default function LoginPage() {
   const features = [
