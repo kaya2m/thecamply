@@ -7,9 +7,8 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/shared/utils/cn'
-import { 
-  FunnelIcon, 
-  ListBulletIcon, 
+import {
+  ListBulletIcon,
   XMarkIcon,
   MapPinIcon,
   StarIcon
@@ -44,7 +43,6 @@ export default function MapPage() {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
-    // In a real app, this would trigger a new API call with search query
   }
 
   const handleCampClick = (camp: Camp) => {

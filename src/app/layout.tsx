@@ -7,7 +7,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'TheCamply - Camping Community & Discovery',
+  title: 'Camply',
   description: 'Connect with fellow camping enthusiasts, discover amazing campsites, and share your outdoor adventures.',
   keywords: 'camping, outdoor, community, campsites, adventure, nature, travel',
   authors: [{ name: 'TheCamply Team' }],
