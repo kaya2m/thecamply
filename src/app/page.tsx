@@ -5,6 +5,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store/auth/authStore'
+import Logo from '@/components/ui/Logo'
 
 export default function HomePage() {
   const router = useRouter()
@@ -54,12 +55,14 @@ export default function HomePage() {
       <div className="text-center">
         {/* Logo */}
         <div className="flex items-center justify-center space-x-3 mb-8">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-600 text-white font-bold text-2xl animate-pulse">
-            ⛺
-          </div>
-          <h1 className="text-3xl font-bold text-secondary-900 dark:text-secondary-100">
-            The<span className="text-primary-600">Camply</span>
-          </h1>
+         <Logo
+            aria-label="Camply Logo"
+            variant='icon'
+            size='xl'
+            href='/'
+            clickable={true}
+            priority={true}
+            theme='auto' />
         </div>
         
         {/* Loading */}
@@ -70,14 +73,6 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Debug info in development */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-8 text-xs text-gray-500">
-            <p>Debug: Auth={isAuthenticated ? 'true' : 'false'}, Loading={isLoading ? 'true' : 'false'}</p>
-            <p>User: {user?.username || 'none'}</p>
-            <p>Cookies: {typeof document !== 'undefined' ? document.cookie : 'N/A'}</p>
-          </div>
-        )}
       </div>
     </div>
   )

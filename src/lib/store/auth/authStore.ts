@@ -45,10 +45,8 @@ const setCookie = (name: string, value: string, days: number = 7) => {
 
 const getCookie = (name: string): string | null => {
   if (typeof window === 'undefined') return null
-  
   const nameEQ = name + "="
   const ca = document.cookie.split(';')
-  
   for (let i = 0; i < ca.length; i++) {
     let c = ca[i]
     while (c.charAt(0) === ' ') c = c.substring(1, c.length)
@@ -77,7 +75,6 @@ export const useAuthStore = create<AuthStore>()(
     persist(
       immer((set, get) => ({
         ...initialState,
-        
         login: async (credentials: LoginFormData) => {
           set((state) => {
             state.isLoading = true

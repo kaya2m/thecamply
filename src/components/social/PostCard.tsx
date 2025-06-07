@@ -16,10 +16,9 @@ import {
   HeartIcon as HeartIconSolid,
   BookmarkIcon as BookmarkIconSolid
 } from '@heroicons/react/24/solid'
-import { Menu } from '@headlessui/react'
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { useFeedStore } from '@/shared/stores/feedStore'
 import { Avatar } from '@/components/ui/Avatar'
-import { Button } from '@/components/ui/Button'
 import { cn } from '@/shared/utils/cn'
 import type { Post } from '@/shared/types/post'
 
@@ -46,7 +45,6 @@ export const PostCard: React.FC<PostCardProps> = ({
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`
     if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d`
-    
     return date.toLocaleDateString()
   }
 
@@ -81,7 +79,6 @@ export const PostCard: React.FC<PostCardProps> = ({
                 size="md"
               />
             </Link>
-            
             <div>
               <div className="flex items-center space-x-1">
                 <Link
@@ -110,21 +107,21 @@ export const PostCard: React.FC<PostCardProps> = ({
           </div>
 
           <Menu as="div" className="relative">
-            <Menu.Button className="rounded-full p-1 text-secondary-400 hover:text-secondary-600 dark:hover:text-secondary-300">
+            <MenuButton className="rounded-full p-1 text-secondary-400 hover:text-secondary-600 dark:hover:text-secondary-300">
               <EllipsisHorizontalIcon className="h-5 w-5" />
-            </Menu.Button>
-            <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-secondary-800">
-              <Menu.Item>
+            </MenuButton>
+            <MenuItems className="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-secondary-800">
+              <MenuItem>
                 <button className="block px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-100 dark:text-secondary-300 dark:hover:bg-secondary-700 w-full text-left">
                   Share
                 </button>
-              </Menu.Item>
-              <Menu.Item>
+              </MenuItem>
+              <MenuItem>
                 <button className="block px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-100 dark:text-secondary-300 dark:hover:bg-secondary-700 w-full text-left">
                   Report
                 </button>
-              </Menu.Item>
-            </Menu.Items>
+              </MenuItem>
+            </MenuItems>
           </Menu>
         </div>
 
@@ -142,7 +139,6 @@ export const PostCard: React.FC<PostCardProps> = ({
         <p className="text-secondary-900 dark:text-secondary-100 whitespace-pre-wrap">
           {post.content}
         </p>
-        
         {/* Tags */}
         {post.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">

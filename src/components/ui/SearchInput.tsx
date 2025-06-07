@@ -60,7 +60,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
 
   return (
     <div className={cn('relative', className)} {...props}>
-      <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
+      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
         <MagnifyingGlassIcon className={cn('text-secondary-400', iconSizes[size])} />
       </div>
       

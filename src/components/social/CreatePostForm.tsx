@@ -104,12 +104,12 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         <div className="flex items-center space-x-3">
           <Avatar
             src={user.avatar}
-            alt={`${user.firstName} ${user.lastName}`}
+            alt={`${user.name} ${user.surname}`}
             size="md"
           />
           <div>
             <p className="font-semibold text-secondary-900 dark:text-secondary-100">
-              {user.firstName} {user.lastName}
+              {user.name} {user.surname}
             </p>
             <p className="text-sm text-secondary-500 dark:text-secondary-400">
               @{user.username}

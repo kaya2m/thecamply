@@ -14,15 +14,13 @@ export default function PublicLayout({
   return (
     <div className="flex h-screen bg-secondary-50 dark:bg-secondary-900">
       {/* Sidebar */}
-      <div className="hidden md:flex md:w-64 md:flex-col">
         <Sidebar />
-      </div>
 
       {/* Mobile sidebar */}
-      <Sidebar 
+      {/* <Sidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)} 
-      />
+      /> */}
 
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">

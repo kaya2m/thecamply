@@ -129,8 +129,8 @@ export const Header: React.FC<HeaderProps> = ({
                 <Menu as="div" className="relative">
                   <Menu.Button className="flex items-center rounded-lg p-1 hover:bg-secondary-100 dark:hover:bg-secondary-800">
                     <Avatar
-                      src={user.avatar}
-                      alt={`${user.firstName} ${user.lastName}`}
+                      src={user.profileImageUrl}
+                      alt={`${user.name} ${user.surname}`}
                       size="sm"
                     />
                   </Menu.Button>
@@ -146,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-lg bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-secondary-800 dark:ring-secondary-700">
                       <div className="px-4 py-2 border-b border-secondary-100 dark:border-secondary-700">
                         <p className="text-sm font-medium text-secondary-900 dark:text-secondary-100">
-                          {user.firstName} {user.lastName}
+                          {user.name} {user.surname}
                         </p>
                         <p className="text-xs text-secondary-500 dark:text-secondary-400">
                           @{user.username}

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Image from 'next/image'
 import { cn } from '@/shared/utils/cn'
 import type { BaseProps } from '@/shared/types/ui'
@@ -28,7 +28,20 @@ export const Avatar: React.FC<AvatarProps> = ({
   className,
   ...props
 }) => {
+  const [imageError, setImageError] = useState(false)
+  const [imageLoading, setImageLoading] = useState(true)
+
+  console.log('Avatar rendered:', { src, alt, size, fallback, online })
   const initials = fallback || alt.split(' ').map(n => n[0]).join('').toUpperCase()
+
+  const handleImageError = () => {
+    setImageError(true)
+    setImageLoading(false)
+  }
+
+  const handleImageLoad = () => {
+    setImageLoading(false)
+  }
 
   return (
     <div className={cn('relative inline-block', className)} {...props}>
@@ -38,14 +51,32 @@ export const Avatar: React.FC<AvatarProps> = ({
           avatarSizes[size]
         )}
       >
-        {src ? (
-          <Image
-            src={src}
-            alt={alt}
-            fill
-            className="object-cover"
-            sizes={size === 'xs' ? '24px' : size === 'sm' ? '32px' : size === 'md' ? '40px' : size === 'lg' ? '48px' : '64px'}
-          />
+        {src && !imageError ? (
+          <>
+            <Image
+              src={src}
+              alt={alt}
+              fill
+              className={cn(
+                'object-cover transition-opacity duration-200',
+                imageLoading ? 'opacity-0' : 'opacity-100'
+              )}
+              sizes={
+                size === 'xs' ? '24px' :
+                size === 'sm' ? '32px' :
+                size === 'md' ? '40px' :
+                size === 'lg' ? '48px' : '64px'
+              }
+              onError={handleImageError}
+              onLoad={handleImageLoad}
+              priority={size === 'lg' || size === 'xl'}
+            />
+            {imageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-secondary-300 border-t-primary-500" />
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs font-medium text-secondary-600 dark:text-secondary-300">
             {initials}

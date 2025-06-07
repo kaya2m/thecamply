@@ -8,6 +8,12 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+       {
+        protocol: 'https',
+        hostname: 'camplymedia.blob.core.windows.net',
+        port: '',
+        pathname: '/camply-media/**',
+      },
       {
         protocol: 'http',
         hostname: 'localhost',

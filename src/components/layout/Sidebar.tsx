@@ -26,6 +26,8 @@ import {
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/shared/utils/cn'
 import { useAuthStore } from '@/lib/store/auth/authStore'
+import Logo from '../ui/Logo'
+import { Avatar } from '../ui/Avatar'
 
 interface NavigationItem {
   name: string
@@ -97,7 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const pathname = usePathname()
   
-  const { isAuthenticated, user } = useAuthStore()
+  const { user, isAuthenticated } = useAuthStore()
 
   debugger
   const filteredNavigation = navigation.filter(item => 
@@ -151,14 +153,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="flex h-16 items-center justify-between px-6 border-b border-secondary-200 dark:border-secondary-700">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-white font-bold">
-                C
-              </div>
-              <span className="text-xl font-bold text-secondary-900 dark:text-secondary-100">
-                TheCamply
-              </span>
-            </Link>
+              <Logo
+                className="h-8 w-8 text-primary-600 dark:text-primary-400"
+                aria-label="Camply Logo"
+                variant='icon'
+                size='lg'
+                href='/'
+                clickable = {true}
+                priority={true}
+                theme='auto' >
+              </Logo>
           </div>
 
           {/* Navigation */}
@@ -193,12 +197,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className="flex items-center space-x-3 rounded-lg p-3 hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors"
                 onClick={onClose}
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-white font-semibold">
-                  {user.username}
-                </div>
+                <Avatar
+                  src={user.profileImageUrl}
+                  alt={`${user.name} ${user.surname}`}
+                  size="sm">
+                </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-secondary-900 dark:text-secondary-100 truncate">
-                    {user.username}
+                    {user.name}  {user.surname}
                   </p>
                   <p className="text-xs text-secondary-500 dark:text-secondary-400 truncate">
                     @{user.username}

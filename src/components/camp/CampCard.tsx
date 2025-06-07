@@ -85,7 +85,6 @@ export const CampCard: React.FC<CampCardProps> = ({
                   <span className="text-secondary-400">No image</span>
                 </div>
               )}
-              
               {/* Favorite button */}
               <button
                 onClick={handleFavoriteClick}
@@ -111,7 +110,6 @@ export const CampCard: React.FC<CampCardProps> = ({
                       <CheckBadgeIcon className="h-5 w-5 text-primary-600" />
                     )}
                   </div>
-                  
                   <div className="flex items-center space-x-1 mb-2">
                     {renderStars(camp.rating)}
                     <span className="text-sm font-medium text-secondary-700 dark:text-secondary-300">

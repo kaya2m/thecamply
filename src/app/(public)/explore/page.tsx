@@ -55,7 +55,7 @@ export default function ExplorePage() {
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-5 mt-5">
         <h1 className="text-3xl font-bold text-secondary-900 dark:text-secondary-100 mb-2">
           Discover Amazing Camps
         </h1>
