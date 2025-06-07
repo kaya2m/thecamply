@@ -35,7 +35,6 @@ const setCookie = (name: string, value: string, days: number = 7) => {
   const expires = new Date()
   expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000))
   
-  // Critical change: Use more permissive SameSite policy and ensure path is correct
   const isSecure = window.location.protocol === 'https:'
   const cookieString = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=Lax${isSecure ? '; Secure' : ''}`
   
@@ -426,19 +425,10 @@ export const useAuthStore = create<AuthStore>()(
           return persistedState
         },
         onRehydrateStorage: () => (state) => {
-          console.log('Auth store rehydrated:', {
-            isAuthenticated: state?.isAuthenticated,
-            user: state?.user?.username
-          })
           if (state?.isAuthenticated && typeof window !== 'undefined') {
             const cookieToken = getCookie('auth-token')
             const cookieRefreshToken = getCookie('refresh-token')
-            console.log('Checking cookies after rehydration:', {
-              hasCookieToken: !!cookieToken,
-              hasCookieRefreshToken: !!cookieRefreshToken
-            })
             if (!cookieToken && !cookieRefreshToken) {
-              console.log('No cookies found, clearing auth state')
               useAuthStore.getState().clearAuthData()
             }
           }

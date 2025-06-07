@@ -67,7 +67,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <Bars3Icon className="h-6 w-6" />
               </button>
             )}
-            
             {/* <Link href="/" className="flex items-center space-x-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-white font-bold">
                 C
@@ -156,7 +155,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <Menu.Item>
                         {({ active }) => (
                           <Link
-                            href={`/users/${user.username}`}
+                            href={`/${user.username}`}
                             className={cn(
                               'flex items-center px-4 py-2 text-sm',
                               active

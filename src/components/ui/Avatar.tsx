@@ -6,7 +6,7 @@ import type { BaseProps } from '@/shared/types/ui'
 interface AvatarProps extends BaseProps {
   src?: string
   alt: string
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl'
   fallback?: string
   online?: boolean
 }
@@ -16,7 +16,8 @@ const avatarSizes = {
   sm: 'h-8 w-8',
   md: 'h-10 w-10',
   lg: 'h-12 w-12',
-  xl: 'h-16 w-16'
+  xl: 'h-16 w-16',
+  xxl: 'h-20 w-20',
 }
 
 export const Avatar: React.FC<AvatarProps> = ({
@@ -31,7 +32,6 @@ export const Avatar: React.FC<AvatarProps> = ({
   const [imageError, setImageError] = useState(false)
   const [imageLoading, setImageLoading] = useState(true)
 
-  console.log('Avatar rendered:', { src, alt, size, fallback, online })
   const initials = fallback || alt.split(' ').map(n => n[0]).join('').toUpperCase()
 
   const handleImageError = () => {

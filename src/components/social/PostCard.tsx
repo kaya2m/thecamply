@@ -72,31 +72,31 @@ export const PostCard: React.FC<PostCardProps> = ({
       <div className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Link href={`/users/${post.author.username}`}>
+            <Link href={`/${post.user.username}`}>
               <Avatar
-                src={post.author.avatar}
-                alt={`${post.author.firstName} ${post.author.lastName}`}
+                src={post.user.profileImageUrl}
+                alt={`${post.user.name} ${post.user.surname}`}
                 size="md"
               />
             </Link>
             <div>
               <div className="flex items-center space-x-1">
                 <Link
-                  href={`/users/${post.author.username}`}
+                  href={`/${post.user.username}`}
                   className="font-semibold text-secondary-900 dark:text-secondary-100 hover:underline"
                 >
-                  {post.author.firstName} {post.author.lastName}
+                  {post.user.name} {post.user.surname}
                 </Link>
-                {post.author.isVerified && (
+                {/* {post.author.isVerified && (
                   <CheckBadgeIcon className="h-5 w-5 text-primary-600" />
-                )}
+                )} */}
               </div>
               <div className="flex items-center space-x-2 text-sm text-secondary-500 dark:text-secondary-400">
                 <Link
-                  href={`/users/${post.author.username}`}
+                  href={`/${post.user.username}`}
                   className="hover:underline"
                 >
-                  @{post.author.username}
+                  @{post.user.username}
                 </Link>
                 <span>•</span>
                 <time dateTime={post.createdAt}>
@@ -144,11 +144,11 @@ export const PostCard: React.FC<PostCardProps> = ({
           <div className="mt-2 flex flex-wrap gap-1">
             {post.tags.map(tag => (
               <Link
-                key={tag}
+                key={tag.id}
                 href={`/search?q=%23${tag}`}
                 className="text-primary-600 hover:text-primary-700 dark:text-primary-400 text-sm"
               >
-                #{tag}
+                #{tag.name}
               </Link>
             ))}
           </div>
@@ -156,26 +156,26 @@ export const PostCard: React.FC<PostCardProps> = ({
       </div>
 
       {/* Images */}
-      {post.images && post.images.length > 0 && (
+      {post.media && post.media.length > 0 && (
         <div className={cn(
           'grid gap-1',
-          post.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
+          post.media.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
         )}>
-          {post.images.map((image, index) => (
-            !imageError[image] && (
+          {post.media.map((image, index) => (
+            !imageError[image.id] && (
               <div
                 key={index}
                 className={cn(
                   'relative aspect-square overflow-hidden',
-                  post.images!.length === 3 && index === 0 && 'row-span-2'
+                  post.media!.length === 3 && index === 0 && 'row-span-2'
                 )}
               >
                 <Image
-                  src={image}
+                  src={image.url}
                   alt={`Post image ${index + 1}`}
                   fill
                   className="object-cover hover:scale-105 transition-transform duration-200"
-                  onError={() => handleImageError(image)}
+                  onError={() => handleImageError(image.url)}
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
               </div>
@@ -192,18 +192,18 @@ export const PostCard: React.FC<PostCardProps> = ({
               onClick={handleLike}
               className={cn(
                 'flex items-center space-x-2 transition-colors',
-                post.isLiked
+                post.isLikedByCurrentUser
                   ? 'text-red-600 hover:text-red-700'
                   : 'text-secondary-600 hover:text-red-600 dark:text-secondary-400 dark:hover:text-red-400'
               )}
             >
-              {post.isLiked ? (
+              {post.isLikedByCurrentUser ? (
                 <HeartIconSolid className="h-5 w-5" />
               ) : (
                 <HeartIcon className="h-5 w-5" />
               )}
               <span className="text-sm font-medium">
-                {formatNumber(post.likes)}
+                {formatNumber(post.likesCount)}
               </span>
             </button>
 
@@ -213,7 +213,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             >
               <ChatBubbleOvalLeftIcon className="h-5 w-5" />
               <span className="text-sm font-medium">
-                {formatNumber(post.comments)}
+                {formatNumber(post.commentsCount)}
               </span>
             </button>
 
@@ -223,12 +223,12 @@ export const PostCard: React.FC<PostCardProps> = ({
             >
               <ShareIcon className="h-5 w-5" />
               <span className="text-sm font-medium">
-                {formatNumber(post.shares)}
+                {formatNumber(post.likesCount)}
               </span>
             </button>
           </div>
 
-          <button
+          {/* <button
             onClick={handleBookmark}
             className={cn(
               'transition-colors',
@@ -242,7 +242,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             ) : (
               <BookmarkIcon className="h-5 w-5" />
             )}
-          </button>
+          </button> */}
         </div>
       </div>
     </article>

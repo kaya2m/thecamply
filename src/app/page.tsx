@@ -1,5 +1,3 @@
-// src/app/page.tsx - Update HomePage redirection logic
-
 'use client'
 
 import React, { useEffect, useState } from 'react'
@@ -12,7 +10,6 @@ export default function HomePage() {
   const { isAuthenticated, isLoading, user } = useAuthStore()
   const [mounted, setMounted] = useState(false)
 
-  // Hydration'ı bekle
   useEffect(() => {
     setMounted(true)
   }, [])

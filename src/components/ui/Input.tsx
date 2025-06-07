@@ -3,7 +3,7 @@ import { cn } from '@/shared/utils/cn'
 import type { BaseProps } from '@/shared/types/ui'
 
 interface InputProps extends BaseProps {
-  type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url'
+  type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'search' | 'date' | 'time' | 'datetime-local' | 'month' | 'week'
   placeholder?: string
   value?: string
   defaultValue?: string

@@ -98,10 +98,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClose
 }) => {
   const pathname = usePathname()
-  
   const { user, isAuthenticated } = useAuthStore()
 
-  debugger
   const filteredNavigation = navigation.filter(item => 
     !item.requiresAuth || isAuthenticated
   )
@@ -193,7 +191,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {isAuthenticated && user && (
             <div className="p-3 border-t border-secondary-200 dark:border-secondary-700">
               <Link
-                href={`/users/${user.username}`}
+                href={`/${user.username}`}
                 className="flex items-center space-x-3 rounded-lg p-3 hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors"
                 onClick={onClose}
               >

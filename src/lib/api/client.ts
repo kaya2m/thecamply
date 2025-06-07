@@ -121,12 +121,12 @@ class ApiClient {
     endpoint: string,
     params?: Record<string, string | number | boolean>,
     config?: Omit<RequestConfig, 'method' | 'data'>
-  ): Promise<T> {
+  ): Promise<any> {
     const url = params
       ? `${endpoint}?${new URLSearchParams(params as Record<string, string>)}`
       : endpoint
     const response = await this.request<T>(url, { ...config, method: 'GET' })
-    return response.data
+    return response
   }
 
   async post<T = unknown>(
