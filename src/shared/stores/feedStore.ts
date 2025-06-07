@@ -1,5 +1,10 @@
 import { create } from 'zustand'
-import type { Post, Comment, CreatePostData } from '@/shared/types/post'
+import { devtools } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
+import { apiClient } from '@/lib/api/client'
+import { API_ENDPOINTS } from '@/lib/api/endpoints'
+import { ApiError } from '@/lib/api/errors'
+import type { Post, PostsResponse, CreatePostData, PostMedia, PostTag } from '@/shared/types/post'
 
 interface FeedState {
   posts: Post[]
@@ -16,206 +21,295 @@ interface FeedStore extends FeedState {
   bookmarkPost: (postId: string) => Promise<void>
   deletePost: (postId: string) => Promise<void>
   clearError: () => void
+  reset: () => void
 }
 
-// Mock data
-const mockPosts: Post[] = [
-  {
-    id: '1',
-    author: {
-      id: '2',
-      username: 'mountainExplorer',
-      firstName: 'Sarah',
-      lastName: 'Johnson',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
-      isVerified: true
+// API'den gelen data'yı frontend formatına çeviren fonksiyon
+const transformApiPostToFrontend = (apiPost: any): Post => {
+  return {
+    id: apiPost.id,
+    user: {
+      id: apiPost.user.id,
+      name: apiPost.user.name,
+      surname: apiPost.user.surname,
+      username: apiPost.user.username,
+      profileImageUrl: apiPost.user.profileImageUrl,
+      isFollowedByCurrentUser: apiPost.user.isFollowedByCurrentUser || false
     },
-    content: "Just spent an incredible weekend at Kaçkar Mountains! The sunrise from our campsite was absolutely breathtaking. Nothing beats waking up to nature's alarm clock. 🏔️ #KaçkarMountains #Camping #Turkey",
-    images: [
-      'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800',
-      'https://images.unsplash.com/photo-1571863533956-01c88e79957e?w=800'
-    ],
-    location: {
-      name: 'Kaçkar Mountains, Turkey',
-      coordinates: [40.825, 41.109]
-    },
-    tags: ['KaçkarMountains', 'Camping', 'Turkey'],
-    createdAt: '2024-06-01T08:30:00Z',
-    updatedAt: '2024-06-01T08:30:00Z',
-    likes: 42,
-    comments: 8,
-    shares: 3,
-    isLiked: false,
-    isBookmarked: true,
-    visibility: 'public'
-  },
-  {
-    id: '2',
-    author: {
-      id: '3',
-      username: 'coastalCamper',
-      firstName: 'Mehmet',
-      lastName: 'Yılmaz',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-      isVerified: false
-    },
-    content: "Beach camping in Antalya is a whole different experience! The sound of waves as your lullaby and the sea breeze keeping you cool. Perfect spot for stargazing too! ⭐",
-    images: [
-      'https://images.unsplash.com/photo-1510312305653-8ed496efcaef?w=800'
-    ],
-    location: {
-      name: 'Antalya Coast, Turkey',
-      coordinates: [36.8969, 30.7133]
-    },
-    tags: ['BeachCamping', 'Antalya', 'Stargazing'],
-    createdAt: '2024-05-30T19:45:00Z',
-    updatedAt: '2024-05-30T19:45:00Z',
-    likes: 28,
-    comments: 5,
-    shares: 1,
-    isLiked: true,
-    isBookmarked: false,
-    visibility: 'public'
-  },
-  {
-    id: '3',
-    author: {
-      id: '4',
-      username: 'forestWanderer',
-      firstName: 'Elif',
-      lastName: 'Demir',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-      isVerified: true
-    },
-    content: "Pro tip: Always check the weather forecast AND the ground conditions before setting up camp. Learned this the hard way last night when unexpected rain turned our campsite into a mini lake! 😅 Still had fun though!",
-    location: {
-      name: 'Yedigöller National Park, Turkey',
-      coordinates: [40.9543, 31.7339]
-    },
-    tags: ['CampingTips', 'YedigöllerNationalPark', 'WeatherTips'],
-    createdAt: '2024-05-29T12:15:00Z',
-    updatedAt: '2024-05-29T12:15:00Z',
-    likes: 67,
-    comments: 12,
-    shares: 8,
-    isLiked: false,
-    isBookmarked: false,
-    visibility: 'public'
-  }
-]
-
-// Mock API functions
-const mockFetchPosts = async (page: number): Promise<{ posts: Post[], hasMore: boolean }> => {
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  
-  if (page === 1) {
-    return { posts: mockPosts, hasMore: true }
-  } else {
-    return { posts: [], hasMore: false }
+    content: apiPost.content,
+    media: apiPost.media || [],
+    createdAt: apiPost.createdAt,
+    likesCount: apiPost.likesCount || 0,
+    commentsCount: apiPost.commentsCount || 0,
+    tags: apiPost.tags || [],
+    location: apiPost.location || null,
+    isLikedByCurrentUser: apiPost.isLikedByCurrentUser || false
   }
 }
 
-export const useFeedStore = create<FeedStore>((set, get) => ({
-  posts: [],
-  loading: false,
-  error: null,
-  hasMore: true,
-  page: 1,
+// Frontend'den API'ye gönderilecek data'yı hazırlayan fonksiyon
+const transformCreatePostDataToApi = (data: CreatePostData) => {
+  return {
+    content: data.content,
+    media: data.images ? [] : [], // Images upload edilecek ve media array'e çevrilecek
+    tags: data.tags.map(tag => ({ name: tag })),
+    location: data.location,
+    visibility: data.visibility
+  }
+}
 
-  fetchPosts: async (refresh = false) => {
-    const { page: currentPage, posts: currentPosts } = get()
-    const page = refresh ? 1 : currentPage
+export const useFeedStore = create<FeedStore>()(
+  devtools(
+    immer((set, get) => ({
+      posts: [],
+      loading: false,
+      error: null,
+      hasMore: true,
+      page: 1,
 
-    set({ loading: true, error: null })
-    
-    try {
-      const { posts: newPosts, hasMore } = await mockFetchPosts(page)
-      
-      set({
-        posts: refresh ? newPosts : [...currentPosts, ...newPosts],
-        page: page + 1,
-        hasMore,
-        loading: false
-      })
-    } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : 'Failed to fetch posts',
-        loading: false
-      })
-    }
-  },
+      fetchPosts: async (refresh = false) => {
+        const { page: currentPage, posts: currentPosts } = get()
+        const targetPage = refresh ? 1 : currentPage
 
-  createPost: async (data) => {
-    set({ loading: true, error: null })
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const newPost: Post = {
-        id: Math.random().toString(36).substr(2, 9),
-        author: {
-          id: '1',
-          username: 'outdoorExplorer',
-          firstName: 'John',
-          lastName: 'Doe',
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
-          isVerified: true
-        },
-        content: data.content,
-        images: [], // In real app, would upload images and get URLs
-        location: data.location,
-        tags: data.tags,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        likes: 0,
-        comments: 0,
-        shares: 0,
-        isLiked: false,
-        isBookmarked: false,
-        visibility: data.visibility
-      }
-      
-      set(state => ({
-        posts: [newPost, ...state.posts],
-        loading: false
-      }))
-    } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : 'Failed to create post',
-        loading: false
-      })
-    }
-  },
+        console.log('[FeedStore] Fetching posts:', { refresh, targetPage })
 
-  likePost: async (postId) => {
-    set(state => ({
-      posts: state.posts.map(post =>
-        post.id === postId
-          ? {
-              ...post,
-              isLiked: !post.isLiked,
-              likes: post.isLiked ? post.likes - 1 : post.likes + 1
+        set((state) => {
+          state.loading = true
+          state.error = null
+          if (refresh) {
+            state.posts = []
+            state.page = 1
+          }
+        })
+
+        try {
+          // API'den posts'ları çek
+          const response = await apiClient.get<PostsResponse>(
+            API_ENDPOINTS.FEED.POSTS,
+            {
+              page: targetPage,
+              pageSize: 10
             }
-          : post
-      )
-    }))
-  },
+          )
 
-  bookmarkPost: async (postId) => {
-    set(state => ({
-      posts: state.posts.map(post =>
-        post.id === postId
-          ? { ...post, isBookmarked: !post.isBookmarked }
-          : post
-      )
-    }))
-  },
+          console.log('[FeedStore] Posts API response:', response)
 
-  deletePost: async (postId) => {
-    set(state => ({
-      posts: state.posts.filter(post => post.id !== postId)
-    }))
-  },
+          if (!response.data) {
+            throw new Error('Invalid response format')
+          }
 
-  clearError: () => set({ error: null })
-}))
+          const { items, hasNextPage } = response.data
+          const transformedPosts = items.map(transformApiPostToFrontend)
+
+          set((state) => {
+            if (refresh) {
+              state.posts = transformedPosts
+            } else {
+              state.posts.push(...transformedPosts)
+            }
+            state.page = targetPage + 1
+            state.hasMore = hasNextPage
+            state.loading = false
+          })
+
+        } catch (error) {
+          console.error('[FeedStore] Failed to fetch posts:', error)
+          
+          set((state) => {
+            state.error = error instanceof ApiError ? error.message : 'Failed to fetch posts'
+            state.loading = false
+          })
+        }
+      },
+
+      createPost: async (data: CreatePostData) => {
+        console.log('[FeedStore] Creating post:', data)
+
+        set((state) => {
+          state.loading = true
+          state.error = null
+        })
+
+        try {
+          // Önce media upload et (eğer varsa)
+          let uploadedMedia: PostMedia[] = []
+          if (data.images && data.images.length > 0) {
+            for (const image of data.images) {
+              try {
+                const formData = new FormData()
+                formData.append('file', image)
+                
+                // Media upload endpoint'i - API'nizde böyle bir endpoint olmalı
+                const uploadResponse = await apiClient.upload<{ 
+                  id: string, 
+                  url: string, 
+                  thumbnailUrl: string,
+                  fileType: string,
+                  width: number,
+                  height: number 
+                }>('/media/upload', formData)
+                
+                uploadedMedia.push({
+                  id: uploadResponse.id,
+                  url: uploadResponse.url,
+                  thumbnailUrl: uploadResponse.thumbnailUrl,
+                  fileType: uploadResponse.fileType,
+                  width: uploadResponse.width,
+                  height: uploadResponse.height,
+                  description: null,
+                  altTag: null
+                })
+              } catch (uploadError) {
+                console.error('Failed to upload image:', uploadError)
+              }
+            }
+          }
+
+          // Post'u oluştur
+          const postData = {
+            content: data.content,
+            media: uploadedMedia,
+            tags: data.tags.map(tag => ({ name: tag })),
+            location: data.location,
+            visibility: data.visibility
+          }
+
+          const response = await apiClient.post<Post>(
+            API_ENDPOINTS.FEED.CREATE_POST,
+            postData
+          )
+
+          if (!response.data) {
+            throw new Error('Invalid response format')
+          }
+
+          const newPost = transformApiPostToFrontend(response.data)
+
+          set((state) => {
+            state.posts.unshift(newPost)
+            state.loading = false
+          })
+
+          console.log('[FeedStore] Post created successfully:', newPost)
+
+        } catch (error) {
+          console.error('[FeedStore] Failed to create post:', error)
+          
+          set((state) => {
+            state.error = error instanceof ApiError ? error.message : 'Failed to create post'
+            state.loading = false
+          })
+          throw error
+        }
+      },
+
+      likePost: async (postId: string) => {
+        console.log('[FeedStore] Toggling like for post:', postId)
+
+        // Optimistic update
+        const currentPost = get().posts.find(p => p.id === postId)
+        if (!currentPost) return
+
+        const wasLiked = currentPost.isLikedByCurrentUser
+
+        set((state) => {
+          const post = state.posts.find(p => p.id === postId)
+          if (post) {
+            post.isLikedByCurrentUser = !post.isLikedByCurrentUser
+            post.likesCount += post.isLikedByCurrentUser ? 1 : -1
+          }
+        })
+
+        try {
+          // API'ye like/unlike isteği gönder
+          if (wasLiked) {
+            await apiClient.delete(API_ENDPOINTS.FEED.LIKE_POST(postId))
+          } else {
+            await apiClient.post(API_ENDPOINTS.FEED.LIKE_POST(postId))
+          }
+
+        } catch (error) {
+          console.error('[FeedStore] Failed to toggle like:', error)
+          
+          // Revert optimistic update on error
+          set((state) => {
+            const post = state.posts.find(p => p.id === postId)
+            if (post) {
+              post.isLikedByCurrentUser = wasLiked
+              post.likesCount += wasLiked ? 1 : -1
+            }
+          })
+
+          set((state) => {
+            state.error = error instanceof ApiError ? error.message : 'Failed to update like'
+          })
+        }
+      },
+
+      bookmarkPost: async (postId: string) => {
+        console.log('[FeedStore] Toggling bookmark for post:', postId)
+
+        try {
+          // API'ye bookmark isteği gönder
+          await apiClient.post(API_ENDPOINTS.FEED.BOOKMARK_POST(postId))
+
+          // Note: isBookmarked field'ı Post interface'inde yok, 
+          // gerekirse ekleyebilirsiniz veya ayrı bir state'te tutabilirsiniz
+
+        } catch (error) {
+          console.error('[FeedStore] Failed to toggle bookmark:', error)
+          
+          set((state) => {
+            state.error = error instanceof ApiError ? error.message : 'Failed to update bookmark'
+          })
+        }
+      },
+
+      deletePost: async (postId: string) => {
+        console.log('[FeedStore] Deleting post:', postId)
+
+        try {
+          await apiClient.delete(API_ENDPOINTS.FEED.POST_DETAIL(postId))
+
+          set((state) => {
+            state.posts = state.posts.filter(post => post.id !== postId)
+          })
+
+        } catch (error) {
+          console.error('[FeedStore] Failed to delete post:', error)
+          
+          set((state) => {
+            state.error = error instanceof ApiError ? error.message : 'Failed to delete post'
+          })
+          throw error
+        }
+      },
+
+      clearError: () => {
+        set((state) => {
+          state.error = null
+        })
+      },
+
+      reset: () => {
+        set((state) => {
+          state.posts = []
+          state.loading = false
+          state.error = null
+          state.hasMore = true
+          state.page = 1
+        })
+      }
+    })),
+    {
+      name: 'feed-store',
+      enabled: process.env.NODE_ENV === 'development'
+    }
+  )
+)
+
+// Selector hooks for better performance
+export const useFeedPosts = () => useFeedStore((state) => state.posts)
+export const useFeedLoading = () => useFeedStore((state) => state.loading)
+export const useFeedError = () => useFeedStore((state) => state.error)
+export const useFeedHasMore = () => useFeedStore((state) => state.hasMore)

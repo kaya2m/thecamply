@@ -47,25 +47,43 @@ export const useUserStore = create<UserStore>()(
       followingLoading: false,
 
       fetchUserProfile: async (username: string) => {
+        console.log('[UserStore] Fetching profile for username:', username)
+        
         set((state) => {
           state.loading = true
           state.error = null
         })
 
         try {
-          // C# controller endpoint: GET /api/users/by-username/{username}
           const apiResponse = await apiClient.get<UserProfileResponse>(`/users/by-username/${username}`)
-          const userProfile = mapApiUserToProfile(apiResponse)
           debugger
+          if (!apiResponse) {
+            throw new Error('Invalid API response format')
+          }
+
+          const userProfile = mapApiUserToProfile(apiResponse)
           set((state) => {
             state.profileUser = userProfile
             state.loading = false
           })
         } catch (error) {
+          console.error('[UserStore] Profile fetch failed:', error)
+          let errorMessage = 'Failed to fetch user profile'
+          if (error instanceof ApiError) {
+            if (error.status === 404) {
+              errorMessage = 'User not found'
+            } else {
+              errorMessage = error.message
+            }
+          } else if (error instanceof Error) {
+            errorMessage = error.message
+          }
           set((state) => {
-            state.error = error instanceof ApiError ? error.message : 'Failed to fetch user profile'
+            state.error = errorMessage
             state.loading = false
+            state.profileUser = null
           })
+          throw error
         }
       },
 
@@ -76,10 +94,10 @@ export const useUserStore = create<UserStore>()(
         })
 
         try {
-          // Bu endpoint için ayrı bir posts controller'ı olması gerekiyor
-          // Eğer posts controller'ınız varsa: GET /api/posts/by-user/{userId}
           const response = await apiClient.get<PostsResponse>(`/posts/by-user/${userId}?page=${page}&pageSize=10`)
-          debugger
+          if (!response) {
+          }
+
           set((state) => {
             if (page === 1) {
               state.userPosts = response.items
@@ -89,6 +107,7 @@ export const useUserStore = create<UserStore>()(
             state.postsLoading = false
           })
         } catch (error) {
+          console.error('[UserStore] Posts fetch failed:', error)
           set((state) => {
             state.error = error instanceof ApiError ? error.message : 'Failed to fetch user posts'
             state.postsLoading = false
@@ -103,14 +122,15 @@ export const useUserStore = create<UserStore>()(
         })
 
         try {
-          // C# controller endpoint: GET /api/users/{id}/followers
-          const response = await apiClient.get<PagedList<UserSummaryResponse>>(`/api/users/${userId}/followers?page=${page}&pageSize=${pageSize}`)
-          
+          const response = await apiClient.get<PagedList<UserSummaryResponse>>(`/users/${userId}/followers?page=${page}&pageSize=${pageSize}`)
+          if (!response || !response.data) {
+            throw new Error('Invalid followers response format')
+          }
           set((state) => {
             if (page === 1) {
-              state.followers = response.items
+              state.followers = response.data.items
             } else {
-              state.followers.push(...response.items)
+              state.followers.push(...response.data.items)
             }
             state.followersLoading = false
           })
@@ -129,14 +149,15 @@ export const useUserStore = create<UserStore>()(
         })
 
         try {
-          // C# controller endpoint: GET /api/users/{id}/following
-          const response = await apiClient.get<PagedList<UserSummaryResponse>>(`/api/users/${userId}/following?page=${page}&pageSize=${pageSize}`)
-          
+          const response = await apiClient.get<PagedList<UserSummaryResponse>>(`/users/${userId}/following?page=${page}&pageSize=${pageSize}`)
+          if (!response || !response.data) {
+            throw new Error('Invalid following response format')
+          }
           set((state) => {
             if (page === 1) {
-              state.following = response.items
+              state.following = response.data.items
             } else {
-              state.following.push(...response.items)
+              state.following.push(...response.data.items)
             }
             state.followingLoading = false
           })
@@ -150,12 +171,11 @@ export const useUserStore = create<UserStore>()(
 
       followUser: async (userId: string) => {
         try {
-          // C# controller endpoint: POST /api/users/{id}/follow
-          await apiClient.post(`/api/users/${userId}/follow`)
-          
+          await apiClient.post(`/users/${userId}/follow`)
           set((state) => {
             if (state.profileUser && state.profileUser.id === userId) {
               state.profileUser.stats.followersCount += 1
+              state.profileUser.isFollowedByCurrentUser = true
             }
           })
         } catch (error) {
@@ -168,12 +188,11 @@ export const useUserStore = create<UserStore>()(
 
       unfollowUser: async (userId: string) => {
         try {
-          // C# controller endpoint: DELETE /api/users/{id}/follow
-          await apiClient.delete(`/api/users/${userId}/follow`)
-          
+          await apiClient.delete(`/users/${userId}/follow`)
           set((state) => {
             if (state.profileUser && state.profileUser.id === userId) {
               state.profileUser.stats.followersCount -= 1
+              state.profileUser.isFollowedByCurrentUser = false
             }
           })
         } catch (error) {
@@ -191,10 +210,11 @@ export const useUserStore = create<UserStore>()(
         })
 
         try {
-          // C# controller endpoint: PUT /api/users/me
-          const updatedApiUser = await apiClient.put<UserProfileResponse>('/api/users/me', data)
-          const updatedProfile = mapApiUserToProfile(updatedApiUser)
-          
+          const response = await apiClient.put<UserProfileResponse>('/users/me', data)
+          if (!response || !response) {
+            throw new Error('Invalid profile update response')
+          }
+          const updatedProfile = mapApiUserToProfile(response)
           set((state) => {
             state.profileUser = updatedProfile
             state.loading = false
@@ -217,11 +237,10 @@ export const useUserStore = create<UserStore>()(
         try {
           const formData = new FormData()
           formData.append('avatar', file)
-          
-          // Bu endpoint için ayrı bir endpoint eklemeniz gerekebilir
-          // Örnek: POST /api/users/me/avatar
-          const result = await apiClient.upload<{ url: string }>('/api/users/me/avatar', formData)
-          
+          const result = await apiClient.upload<{ url: string }>('/users/me/avatar', formData)
+          if (!result || !result.url) {
+            throw new Error('Invalid avatar upload response')
+          }
           set((state) => {
             if (state.profileUser) {
               state.profileUser.profileImageUrl = result.url
@@ -247,9 +266,11 @@ export const useUserStore = create<UserStore>()(
           const formData = new FormData()
           formData.append('cover', file)
           
-          // Bu endpoint için ayrı bir endpoint eklemeniz gerekebilir
-          // Örnek: POST /api/users/me/cover-photo
-          const result = await apiClient.upload<{ url: string }>('/api/users/me/cover-photo', formData)
+          const result = await apiClient.upload<{ url: string }>('/users/me/cover-photo', formData)
+          
+          if (!result || !result.url) {
+            throw new Error('Invalid cover photo upload response')
+          }
           
           set((state) => {
             if (state.profileUser) {
@@ -267,12 +288,17 @@ export const useUserStore = create<UserStore>()(
       },
 
       clearProfile: () => {
+        console.log('[UserStore] Clearing profile data')
         set((state) => {
           state.profileUser = null
           state.userPosts = []
           state.followers = []
           state.following = []
           state.error = null
+          state.loading = false
+          state.postsLoading = false
+          state.followersLoading = false
+          state.followingLoading = false
         })
       },
 

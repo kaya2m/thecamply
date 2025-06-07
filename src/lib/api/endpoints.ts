@@ -14,17 +14,30 @@ export const API_ENDPOINTS = {
   },
 
   USERS: {
-    BY_USERNAME: (username: string) => `/api/users/by-username/${username}`,
-    BY_ID: (id: string) => `/api/users/${id}`,
-    ME: '/api/users/me',
-    UPDATE_PROFILE: '/api/users/me',
-    FOLLOWERS: (userId: string) => `/api/users/${userId}/followers`,
-    FOLLOWING: (userId: string) => `/api/users/${userId}/following`,
-    FOLLOW: (userId: string) => `/api/users/${userId}/follow`,
-    SEARCH: (username: string, limit = 10) => `/api/users/search-user/${username}?limit=${limit}`,
-    AVATAR_UPLOAD: '/api/users/me/avatar',
-    COVER_UPLOAD: '/api/users/me/cover-photo',
+    // Düzeltilmiş endpoint - API'nizle uyumlu olması için
+    BY_USERNAME: (username: string) => `/users/by-username/${username}`,
+    BY_ID: (id: string) => `/users/${id}`,
+    ME: '/users/me',
+    UPDATE_PROFILE: '/users/me',
+    FOLLOWERS: (userId: string) => `/users/${userId}/followers`,
+    FOLLOWING: (userId: string) => `/users/${userId}/following`,
+    FOLLOW: (userId: string) => `/users/${userId}/follow`,
+    SEARCH: (username: string, limit = 10) => `/users/search-user/${username}?limit=${limit}`,
+    AVATAR_UPLOAD: '/users/me/avatar',
+    COVER_UPLOAD: '/users/me/cover-photo',
     CHANGE_PASSWORD: '/users/password',
+  },
+
+  POSTS: {
+    // Posts için endpoint'ler - bu endpoint'lerin API'nizde mevcut olduğundan emin olun
+    BY_USER: (userId: string) => `/posts/by-user/${userId}`,
+    LIST: '/posts',
+    CREATE: '/posts',
+    BY_ID: (id: string) => `/posts/${id}`,
+    UPDATE: (id: string) => `/posts/${id}`,
+    DELETE: (id: string) => `/posts/${id}`,
+    LIKE: (id: string) => `/posts/${id}/like`,
+    COMMENT: (id: string) => `/posts/${id}/comments`,
   },
 
   CAMPS: {

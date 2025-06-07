@@ -36,32 +36,64 @@ export default function UserProfilePage() {
     fetchUserProfile,
     fetchUserPosts,
     followUser,
-    unfollowUser
+    unfollowUser,
+    clearProfile,
+    clearError
   } = useUserStore()
 
   const [activeTab, setActiveTab] = useState<'posts' | 'camps' | 'reviews' | 'favorites'>('posts')
   const [isFollowing, setIsFollowing] = useState(false)
+  const [profileLoaded, setProfileLoaded] = useState(false)
 
+  // Clear previous profile data when username changes
   useEffect(() => {
-  }, [username, params])
+    clearProfile()
+    clearError()
+    setProfileLoaded(false)
+  }, [username, clearProfile, clearError])
 
+  // Fetch user profile
   useEffect(() => {
-      if (currentUser?.id) {
-        fetchUserPosts(currentUser.id)
+    if (username && !profileLoaded) {
+      console.log('Fetching profile for username:', username)
+      fetchUserProfile(username)
+        .then(() => {
+          console.log('Profile fetch completed')
+          setProfileLoaded(true)
+        })
+        .catch((error) => {
+          console.error('Profile fetch failed:', error)
+          setProfileLoaded(true)
+        })
     }
-  }, [username, fetchUserProfile, fetchUserPosts, profileUser])
+  }, [username, fetchUserProfile, profileLoaded])
 
+  // Fetch user posts when profile is loaded
   useEffect(() => {
-  }, [profileUser, error])
+    if (profileUser?.id && activeTab === 'posts') {
+      console.log('Fetching posts for user:', profileUser.id)
+      fetchUserPosts(profileUser.id)
+    }
+  }, [profileUser?.id, activeTab, fetchUserPosts])
 
+  // Set following status
   useEffect(() => {
     if (profileUser && currentUser) {
-      setIsFollowing(Math.random() > 0.5)
+      setIsFollowing(profileUser.isFollowedByCurrentUser || false)
     }
   }, [profileUser, currentUser])
-debugger
-  // Show debug info if no user found
-  if (!loading && !profileUser && !error) {
+
+  // Show loading skeleton
+  if (loading && !profileLoaded) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <ProfileSkeleton />
+      </div>
+    )
+  }
+
+  // Show debug info in development
+  if (!loading && !profileUser && !error && process.env.NODE_ENV === 'development') {
     return (
       <div className="max-w-4xl mx-auto">
         <Card className="p-8 text-center">
@@ -72,12 +104,14 @@ debugger
             <p><strong>Requested username:</strong> {username}</p>
             <p><strong>Params:</strong> {JSON.stringify(params)}</p>
             <p><strong>Loading:</strong> {loading.toString()}</p>
+            <p><strong>Profile Loaded:</strong> {profileLoaded.toString()}</p>
             <p><strong>Error:</strong> {error || 'null'}</p>
             <p><strong>Profile User:</strong> {profileUser ? 'Found' : 'Not found'}</p>
+            <p><strong>Current User:</strong> {currentUser?.username || 'Not logged in'}</p>
           </div>
           <div className="mt-6">
             <p className="text-secondary-600 dark:text-secondary-400 mb-4">
-              Available test usernames:
+              Test usernames (these might not exist in your API):
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
               <Button 
@@ -105,10 +139,7 @@ debugger
     )
   }
 
-  if (loading) {
-    return <ProfileSkeleton />
-  }
-
+  // Show error state
   if (error) {
     return (
       <div className="max-w-4xl mx-auto">
@@ -120,22 +151,41 @@ debugger
           <p className="text-sm text-secondary-500 dark:text-secondary-400 mb-6">
             Error: {error}
           </p>
-          <Button onClick={() => window.location.href = '/'}>
-            Go Home
-          </Button>
+          <div className="space-x-4">
+            <Button onClick={() => window.location.href = '/'}>
+              Go Home
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                clearError()
+                clearProfile()
+                setProfileLoaded(false)
+                fetchUserProfile(username)
+              }}
+            >
+              Try Again
+            </Button>
+          </div>
         </Card>
       </div>
     )
   }
 
-  if (!profileUser) {
+  // Show not found if no profile and loading is complete
+  if (!profileUser && profileLoaded && !loading) {
     notFound()
+  }
+
+  // Return null if still loading or no profile yet
+  if (!profileUser) {
+    return null
   }
 
   const isOwnProfile = currentUser?.username === profileUser.username
 
   const handleFollow = async () => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated || !profileUser) return
     
     try {
       if (isFollowing) {
@@ -198,10 +248,10 @@ debugger
           </div>
 
           {/* Profile Info */}
-        <div className="px-6 pb-6 relative">
-            <div className="flex flex-col md:flex-row md:items-end md:space-x-6 ">
+          <div className="px-6 pb-6 relative">
+            <div className="flex flex-col md:flex-row md:items-end md:space-x-6">
               {/* Avatar */}
-              <div className="relative  md:mb-0 z-20">
+              <div className="relative md:mb-0 z-20">
                 <Avatar
                   src={profileUser.profileImageUrl}
                   alt={`${profileUser.name} ${profileUser.surname}`}
@@ -250,7 +300,7 @@ debugger
                       </div>
                       <div>
                         <span className="font-semibold text-secondary-900 dark:text-secondary-100">
-                          {profileUser.stats.likesReceived}
+                          {profileUser.stats.likesReceived || 0}
                         </span>
                         <span className="text-secondary-600 dark:text-secondary-400 ml-1">
                           likes
