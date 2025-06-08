@@ -70,9 +70,6 @@ export const useFeedStore = create<FeedStore>()(
       fetchPosts: async (refresh = false) => {
         const { page: currentPage, posts: currentPosts } = get()
         const targetPage = refresh ? 1 : currentPage
-
-        console.log('[FeedStore] Fetching posts:', { refresh, targetPage })
-
         set((state) => {
           state.loading = true
           state.error = null
@@ -91,9 +88,6 @@ export const useFeedStore = create<FeedStore>()(
               pageSize: 10
             }
           )
-
-          console.log('[FeedStore] Posts API response:', response)
-
           if (!response.data) {
             throw new Error('Invalid response format')
           }
@@ -123,8 +117,6 @@ export const useFeedStore = create<FeedStore>()(
       },
 
       createPost: async (data: CreatePostData) => {
-        console.log('[FeedStore] Creating post:', data)
-
         set((state) => {
           state.loading = true
           state.error = null
@@ -189,12 +181,8 @@ export const useFeedStore = create<FeedStore>()(
             state.posts.unshift(newPost)
             state.loading = false
           })
-
-          console.log('[FeedStore] Post created successfully:', newPost)
-
         } catch (error) {
           console.error('[FeedStore] Failed to create post:', error)
-          
           set((state) => {
             state.error = error instanceof ApiError ? error.message : 'Failed to create post'
             state.loading = false
@@ -204,9 +192,6 @@ export const useFeedStore = create<FeedStore>()(
       },
 
       likePost: async (postId: string) => {
-        console.log('[FeedStore] Toggling like for post:', postId)
-
-        // Optimistic update
         const currentPost = get().posts.find(p => p.id === postId)
         if (!currentPost) return
 
@@ -247,15 +232,8 @@ export const useFeedStore = create<FeedStore>()(
       },
 
       bookmarkPost: async (postId: string) => {
-        console.log('[FeedStore] Toggling bookmark for post:', postId)
-
         try {
-          // API'ye bookmark isteği gönder
           await apiClient.post(API_ENDPOINTS.FEED.BOOKMARK_POST(postId))
-
-          // Note: isBookmarked field'ı Post interface'inde yok, 
-          // gerekirse ekleyebilirsiniz veya ayrı bir state'te tutabilirsiniz
-
         } catch (error) {
           console.error('[FeedStore] Failed to toggle bookmark:', error)
           
@@ -266,8 +244,6 @@ export const useFeedStore = create<FeedStore>()(
       },
 
       deletePost: async (postId: string) => {
-        console.log('[FeedStore] Deleting post:', postId)
-
         try {
           await apiClient.delete(API_ENDPOINTS.FEED.POST_DETAIL(postId))
 
