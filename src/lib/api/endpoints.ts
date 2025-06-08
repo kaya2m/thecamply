@@ -4,8 +4,9 @@ export const API_ENDPOINTS = {
     REGISTER: '/auth/register',
     LOGOUT: '/auth/logout',
     REFRESH: '/auth/refresh',
-    FORGOT_PASSWORD: '/auth/forgot-password',
-    RESET_PASSWORD: '/auth/reset-password',
+    FORGOT_PASSWORD: '/users/forgot-password',
+    VERIFY_RESET_CODE: '/users/verify-reset-code',
+    RESET_PASSWORD: '/users/reset-password',
     VERIFY_EMAIL: '/auth/verify-email',
     SOCIAL: {
       GOOGLE: '/auth/social/google',

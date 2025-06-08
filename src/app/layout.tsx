@@ -43,9 +43,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <AuthHeaderInterceptor />
-        
         <div id="root">{children}</div>
-        
         {process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
           <Script
             src="https://accounts.google.com/gsi/client"
@@ -53,7 +51,6 @@ export default function RootLayout({
             onLoad={() => console.log('Google SDK loaded')}
           />
         )}
-        
         {process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_FACEBOOK_APP_ID && (
           <Script
             src="https://connect.facebook.net/tr_TR/sdk.js"

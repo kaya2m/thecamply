@@ -4,7 +4,18 @@ import { jwtVerify } from 'jose'
 const ROUTES = {
   protected: ['/feed', '/profile', '/settings', '/dashboard', '/admin'],
   auth: ['/login', '/register', '/auth/login', '/auth/register'],
-  public: ['/', '/about', '/contact', '/explore', '/map', '/camps', '/auth/forgot-password', '/auth/reset-password', '/auth/verify-email'],
+   public: [
+    '/',
+    '/about',
+    '/contact',
+    '/explore',
+    '/map',
+    '/camps',
+    '/forgot-password',
+    '/auth/forgot-password',
+    '/auth/reset-password',
+    '/auth/verify-email'
+  ],
   admin: ['/admin'],
 } as const
 
@@ -50,23 +61,10 @@ async function getAuthStatus(request: NextRequest) {
   const tokenFromCookie = request.cookies.get('auth-token')?.value
   const tokenFromHeader = request.headers.get('authorization')?.replace('Bearer ', '')
   const clientAuthStatus = request.headers.get('x-client-auth') === 'true'
-  
   const token = tokenFromCookie || tokenFromHeader
-  
   const pathname = request.nextUrl.pathname
   const isAuthRoute = pathname.startsWith('/feed') || pathname.startsWith('/dashboard')
-  
   const trustClientAuth = isAuthRoute && clientAuthStatus && !token
-  
-  console.log('[getAuthStatus]', {
-    pathname,
-    hasCookieToken: !!tokenFromCookie,
-    hasHeaderToken: !!tokenFromHeader,
-    clientAuthStatus,
-    finalToken: !!token,
-    trustClientAuth,
-  })
-  
   if (!token) {
     return { 
       isAuthenticated: trustClientAuth || clientAuthStatus,
@@ -107,21 +105,10 @@ export async function middleware(request: NextRequest) {
   ) {
     return NextResponse.next()
   }
-
-  console.log(`[Middleware] Processing: ${pathname}`)
-
   const authStatus = await getAuthStatus(request)
   const { isAuthenticated, token, isValid } = authStatus
 
-  console.log(`[Middleware] Auth status:`, { 
-    isAuthenticated, 
-    hasToken: !!token, 
-    isValid,
-    pathname 
-  })
-
   if (token && !isValid) {
-    console.log(`[Middleware] Invalid token detected, clearing authentication`)
     const response = NextResponse.redirect(new URL('/login', request.url))
     response.cookies.delete('auth-token')
     response.cookies.delete('refresh-token')
@@ -129,13 +116,11 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isAuthenticated && matchesRoute(pathname, ROUTES.auth)) {
-    console.log(`[Middleware] Redirecting authenticated user from ${pathname} to /feed`)
     return NextResponse.redirect(new URL('/feed', request.url))
   }
 
   if (matchesRoute(pathname, ROUTES.admin)) {
     if (!isAuthenticated || !isValid) {
-      console.log(`[Middleware] Unauthenticated access to admin route: ${pathname}`)
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
       loginUrl.searchParams.set('message', 'admin-required')
@@ -144,19 +129,15 @@ export async function middleware(request: NextRequest) {
 
     const hasAdminRole = token ? await checkUserRole(token, 'admin') : false
     if (!hasAdminRole) {
-      console.log(`[Middleware] Insufficient permissions for admin route: ${pathname}`)
       return NextResponse.redirect(new URL('/unauthorized', request.url))
     }
   }
 
   if (matchesRoute(pathname, ROUTES.protected)) {
     if (token && isValid) {
-      console.log(`[Middleware] Valid token found, allowing access to ${pathname}`)
     }
     else if (!token) {
-      console.log(`[Middleware] No server token but client reports authenticated for ${pathname}`)
     }    else if (!isAuthenticated && !request.headers.get('x-client-auth')) {
-      console.log(`[Middleware] Unauthenticated access to protected route: ${pathname}`)
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(loginUrl)
@@ -201,7 +182,6 @@ export async function middleware(request: NextRequest) {
     const isValidReferer = referer && host && referer.includes(host)
     
     if (!isValidOrigin && !isValidReferer) {
-      console.log(`[Middleware] CSRF protection triggered for ${pathname}`)
       return new NextResponse('Forbidden - Invalid origin', { status: 403 })
     }
   }

@@ -39,7 +39,6 @@ const setCookie = (name: string, value: string, days: number = 7) => {
   const cookieString = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=Lax${isSecure ? '; Secure' : ''}`
   
   document.cookie = cookieString
-  console.log(`Cookie set: ${name}`, { expires: expires.toUTCString(), secure: isSecure })
 }
 
 const getCookie = (name: string): string | null => {
@@ -57,7 +56,6 @@ const getCookie = (name: string): string | null => {
 const deleteCookie = (name: string) => {
   if (typeof window === 'undefined') return
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`
-  console.log(`Cookie deleted: ${name}`)
 }
 
 const initialState: AuthState = {
@@ -81,7 +79,6 @@ export const useAuthStore = create<AuthStore>()(
           })
 
           try {
-            console.log('Sending login request...')
             const response = await apiClient.post<AuthResponse>(
               API_ENDPOINTS.AUTH.LOGIN,
               {
@@ -89,10 +86,7 @@ export const useAuthStore = create<AuthStore>()(
                 password: credentials.password,
               }
             )
-
-            console.log('Login API response received:', response)
             await get().handleAuthSuccess(response)
-            console.log('Auth success handled, authentication state updated')
 
           } catch (error) {
             console.error('Login failed:', error)
@@ -116,6 +110,7 @@ export const useAuthStore = create<AuthStore>()(
               {
                 email: data.email,
                 password: data.password,
+                confirmPassword: data.confirmPassword,
                 firstName: data.firstName,
                 lastName: data.lastName,
                 username: data.username,
@@ -159,11 +154,8 @@ export const useAuthStore = create<AuthStore>()(
               };
             }
 
-            console.log('Sending social login request:', { endpoint, provider })
             const response = await apiClient.post<AuthResponse>(endpoint, requestData)
-            console.log('Social login API response received:', response)
             await get().handleAuthSuccess(response)
-            console.log('Social auth success handled')
 
           } catch (error) {
             console.error('Social login failed:', error)
@@ -297,7 +289,74 @@ export const useAuthStore = create<AuthStore>()(
             throw error
           }
         },
+sendForgotPasswordCode: async (email: string) => {
+          set((state) => {
+            state.isLoading = true
+            state.error = null
+          })
 
+          try {
+            await apiClient.post('/users/forgot-password', { email })
+            set((state) => {
+              state.isLoading = false
+            })
+          } catch (error) {
+            console.error('Failed to send forgot password code:', error)
+            set((state) => {
+              state.error = error instanceof ApiError ? error.message : 'Failed to send reset code'
+              state.isLoading = false
+            })
+            throw error
+          }
+        },
+
+        verifyResetCode: async (email: string, code: string) => {
+          set((state) => {
+            state.isLoading = true
+            state.error = null
+          })
+
+          try {
+            await apiClient.post('/users/verify-reset-code', {
+              email,
+              code
+            })
+            set((state) => {
+              state.isLoading = false
+            })
+          } catch (error) {
+            console.error('Failed to verify reset code:', error)
+            set((state) => {
+              state.error = error instanceof ApiError ? error.message : 'Invalid verification code'
+              state.isLoading = false
+            })
+            throw error
+          }
+        },
+
+        resetPasswordWithCode: async (email: string, newPassword: string) => {
+          set((state) => {
+            state.isLoading = true
+            state.error = null
+          })
+
+          try {
+            await apiClient.post('/users/reset-password', {
+              email,
+              newPassword
+            })
+            set((state) => {
+              state.isLoading = false
+            })
+          } catch (error) {
+            console.error('Failed to reset password:', error)
+            set((state) => {
+              state.error = error instanceof ApiError ? error.message : 'Failed to reset password'
+              state.isLoading = false
+            })
+            throw error
+          }
+        },
         verifyEmail: async (token: string) => {
           set((state) => {
             state.isLoading = true
@@ -338,17 +397,14 @@ export const useAuthStore = create<AuthStore>()(
         },
 
        handleAuthSuccess: async (response: AuthResponse) => {
-  console.log('Handling auth success with response:', response)
   const { user, accessToken, refreshToken, expiresAt } = response
 
   if (typeof window !== 'undefined') {
     if (accessToken) {
       document.cookie = `auth-token=${accessToken}; path=/; max-age=${7*24*60*60}; SameSite=Lax`;
-      console.log('Access token stored in cookie')
     }
     if (refreshToken) {
       document.cookie = `refresh-token=${refreshToken}; path=/; max-age=${30*24*60*60}; SameSite=Lax`;
-      console.log('Refresh token stored in cookie')
     }
   }
 
@@ -366,26 +422,15 @@ export const useAuthStore = create<AuthStore>()(
   })
 
   await new Promise(resolve => setTimeout(resolve, 100))
-
-  console.log('Auth state updated successfully:', {
-    isAuthenticated: true,
-    user: user?.username,
-    sessionExpiresAt,
-    tokenStored: !!accessToken,
-    cookiePresent: document.cookie.includes('auth-token')
-  })
 }
 ,
         clearAuthData: () => {
-          console.log('Clearing auth data...')
           if (typeof window !== 'undefined') {
             deleteCookie('auth-token')
             deleteCookie('refresh-token')
-            console.log('Tokens cleared from cookies')
           }
 
           set(() => ({ ...initialState }))
-          console.log('Auth data cleared')
         },
 
         getStoredRefreshToken: (): string | null => {

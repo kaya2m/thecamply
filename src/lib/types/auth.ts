@@ -10,7 +10,7 @@ export interface User {
   location?: string
   website?: string
   phone?: string
-  dateOfBirth?: string
+  dateOfBirth?: Date
   joinDate: string
   lastActiveAt?: string
   isVerified: boolean
@@ -123,6 +123,8 @@ export interface UpdateProfileRequest {
   name?: string
   surname?: string
   bio?: string
+  birthDate?: Date
+  userName?:string
 }
 
 export interface PagedList<T> {
@@ -198,6 +200,7 @@ export type LoginFormData = {
 export type RegisterFormData = {
   email: string
   password: string
+  confirmPassword: string
   firstName: string
   lastName: string
   username: string

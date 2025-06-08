@@ -14,6 +14,7 @@ interface InputProps extends BaseProps {
   id?: string
   name?: string
   autoComplete?: string
+  autoFocus?: boolean
   onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void
   onFocus?: (event: React.FocusEvent<HTMLInputElement>) => void
@@ -32,6 +33,7 @@ export const Input: React.FC<InputProps> = ({
   id,
   name,
   autoComplete,
+  autoFocus = false,
   className,
   onChange,
   onBlur,
@@ -63,6 +65,7 @@ export const Input: React.FC<InputProps> = ({
         disabled={disabled}
         required={required}
         autoComplete={autoComplete}
+        autoFocus={autoFocus}
         onChange={onChange}
         onBlur={onBlur}
         onFocus={onFocus}

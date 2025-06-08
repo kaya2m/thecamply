@@ -178,7 +178,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className="justify-center"
                 onClick={() => {
                   // Handle create post modal
-                  console.log('Create post')
                 }}
               >
                 <PlusIcon className="mr-2 h-5 w-5" />

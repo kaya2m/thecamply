@@ -17,14 +17,7 @@ export default function DashboardLayout({
   useEffect(() => {
     setMounted(true)
     const hasAuthCookie = document.cookie.includes('auth-token')
-    console.log('DashboardLayout - Auth state:', { 
-      isAuthenticated, 
-      isLoading, 
-      hasAuthCookie,
-      allCookies: document.cookie
-    })
     if (mounted && !isLoading && !isAuthenticated) {
-      console.log('DashboardLayout - Not authenticated, redirecting to login')
       window.location.href = '/login'
     }
   }, [isAuthenticated, isLoading, mounted])

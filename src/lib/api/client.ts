@@ -49,9 +49,7 @@ class ApiClient {
       const token = getCookie('auth-token')
       if (token) {
         requestHeaders.Authorization = `Bearer ${token}`
-        console.log('Adding auth token from cookie to request:', endpoint)
       } else {
-        console.log('No auth token found in cookie for request:', endpoint)
       }
     }
 
@@ -67,11 +65,6 @@ class ApiClient {
     }
 
     try {
-      console.log(`[ApiClient] ${method} ${url}`, {
-        hasAuth: !!requestHeaders.Authorization,
-        skipAuth,
-        hasCookie: !!getCookie('auth-token')
-      })
       const response = await fetch(url, requestOptions)
       const responseData = await this.parseResponse<T>(response)
       if (!response.ok) {
@@ -83,7 +76,6 @@ class ApiClient {
         )
       }
 
-      console.log(`[ApiClient] Success ${response.status}:`, endpoint)
       return responseData
     } catch (error) {
       if (error instanceof ApiError) {

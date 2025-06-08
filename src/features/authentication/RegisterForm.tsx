@@ -35,11 +35,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     formState: { errors },
     watch
   } = useForm<RegisterData>()
-
+  
   const password = watch('password')
 
   const onSubmit = async (data: RegisterData) => {
     clearError()
+    debugger
     await registerUser(data)
     
     if (useAuthStore.getState().isAuthenticated) {
@@ -52,7 +53,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const handleGoogleSignup = async () => {
     setSocialLoading('google')
     try {
-      console.log('Google signup initiated')
       await new Promise(resolve => setTimeout(resolve, 2000))
     } catch (error) {
       console.error('Google signup failed:', error)
@@ -64,7 +64,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const handleFacebookSignup = async () => {
     setSocialLoading('facebook')
     try {
-      console.log('Facebook signup initiated')
       await new Promise(resolve => setTimeout(resolve, 2000))
     } catch (error) {
       console.error('Facebook signup failed:', error)
@@ -166,6 +165,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             type={showPassword ? "text" : "password"}
             placeholder="En az 8 karakter"
             autoComplete="new-password"
+            autoFocus
+            onFocus={() => clearError()}
             error={errors.password?.message}
             {...register('password', {
               required: 'Şifre gerekli',

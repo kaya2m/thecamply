@@ -17,25 +17,14 @@ export default function HomePage() {
   useEffect(() => {
     if (!mounted) return
 
-    console.log('HomePage: Checking auth state...', {
-      isAuthenticated,
-      isLoading,
-      mounted,
-      user: user?.username,
-      hasCookie: typeof document !== 'undefined' ? document.cookie.includes('auth-token') : 'N/A'
-    })
-
     if (isLoading) {
-      console.log('HomePage: Auth still loading, waiting...')
       return
     }
 
     const timeout = setTimeout(() => {
       if (isAuthenticated) {
-        console.log('HomePage: User authenticated, redirecting to feed')
         window.location.href = '/feed'
       } else {
-        console.log('HomePage: User not authenticated, redirecting to login')
         window.location.href = '/login'
       }
     }, 500) 

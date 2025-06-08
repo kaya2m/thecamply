@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline'
 import type { LoginCredentials } from '@/shared/types/user'
 import { useAuthStore } from '@/lib/store/auth/authStore'
+import Link from 'next/link'
 
 interface SocialSDKStatus {
   google: boolean
@@ -220,7 +221,6 @@ const useSocialAuth = (config: SocialAuthConfig = {}) => {
       })
     })
 
-    console.log('Google credential received, attempting login...');
 
     try {
       const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/social/google`;
@@ -243,16 +243,9 @@ const useSocialAuth = (config: SocialAuthConfig = {}) => {
       }
 
       const data = await apiResponse.json();
-      console.log('API Response:', data);
-
       await useAuthStore.getState().handleAuthSuccess(data);
-
       const authState = useAuthStore.getState();
-      console.log('Auth state after login:', authState);
-      console.log('Cookies present:', document.cookie.includes('auth-token'));
-
       if (authState.isAuthenticated) {
-        console.log('Authentication successful, triggering callbacks and redirect');
         config.onSuccess?.()
 
         setTimeout(() => {
@@ -402,9 +395,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   } = useForm<LoginCredentials>()
 
   useEffect(() => {
-    console.log('Auth state changed:', { isAuthenticated, redirectTo })
     if (isAuthenticated) {
-      console.log('User is authenticated, redirecting...')
       onSuccess?.()
       setTimeout(() => {
         window.location.href = redirectTo
@@ -423,7 +414,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     isFacebookReady
   } = useSocialAuth({
     onSuccess: () => {
-      console.log('Social login success callback triggered')
       onSuccess?.()
     },
     onError: (error) => {
@@ -435,23 +425,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
 const onSubmit = async (data: LoginCredentials) => {
   try {
-    console.log('Starting login process...')
     clearError()
     setFormError(null)
-    
     await login(data)
-    
-    console.log('Login completed, checking auth state...')
     const authState = useAuthStore.getState()
-    console.log('Auth state after login:', authState)
-    
     if (authState.isAuthenticated) {
-      console.log('User authenticated, calling onSuccess and redirecting')
       onSuccess?.()
-      
       setTimeout(() => {
-        console.log('Cookies present before redirect:', document.cookie.includes('auth-token'))
-        console.log('Executing redirect to:', redirectTo)
         window.location.href = redirectTo
       }, 500)
     }
@@ -464,9 +444,9 @@ const onSubmit = async (data: LoginCredentials) => {
     }
   }
 }
-  const handleForgotPassword = () => {
-    router.push('/auth/forgot-password')
-  }
+const handleForgotPassword = () => {
+  router.push('/forgot-password')
+}
 
   const SDKErrorMessage = () => {
     if (!initError) return null
@@ -659,14 +639,13 @@ const onSubmit = async (data: LoginCredentials) => {
             </label>
           )}
           {showForgotPassword && (
-            <button
-              type="button"
-              onClick={handleForgotPassword}
-              className="text-sm text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 transition-colors focus:outline-none focus:underline"
-            >
-              Şifremi unuttum
-            </button>
-          )}
+  <Link
+    href="/forgot-password"
+    className="text-sm text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 transition-colors focus:outline-none focus:underline"
+  >
+    Şifremi unuttum
+  </Link>
+)}
         </div>
 
         <Button

@@ -102,9 +102,9 @@ export default function RegisterPage() {
           <div className="max-w-md mx-auto w-full">
             {/* Mobile Logo */}
             <div className="lg:hidden text-center mb-8">
-              <Logo 
-                variant="icon" 
-                size="lg" 
+              <Logo
+                variant="icon"
+                size="lg"
                 clickable={false}
                 className="justify-center mb-4"
               />
@@ -115,7 +115,6 @@ export default function RegisterPage() {
 
             {/* Register Form Component */}
             <RegisterForm />
-            
             {/* Login Link */}
             <div className="mt-6 text-center">
               <p className="text-sm text-secondary-600 dark:text-secondary-400">

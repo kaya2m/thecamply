@@ -55,10 +55,8 @@ export default function UserProfilePage() {
   // Fetch user profile
   useEffect(() => {
     if (username && !profileLoaded) {
-      console.log('Fetching profile for username:', username)
       fetchUserProfile(username)
         .then(() => {
-          console.log('Profile fetch completed')
           setProfileLoaded(true)
         })
         .catch((error) => {
@@ -71,7 +69,6 @@ export default function UserProfilePage() {
   // Fetch user posts when profile is loaded
   useEffect(() => {
     if (profileUser?.id && activeTab === 'posts') {
-      console.log('Fetching posts for user:', profileUser.id)
       fetchUserPosts(profileUser.id)
     }
   }, [profileUser?.id, activeTab, fetchUserPosts])

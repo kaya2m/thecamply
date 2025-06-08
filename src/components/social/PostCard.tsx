@@ -88,8 +88,6 @@ export const PostCard: React.FC<PostCardProps> = ({
     if (onComment) {
       onComment()
     } else {
-      // Default comment behavior - scroll to comments or open modal
-      console.log('Open comments for post:', post.id)
     }
   }
 

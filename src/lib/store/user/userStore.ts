@@ -47,8 +47,6 @@ export const useUserStore = create<UserStore>()(
       followingLoading: false,
 
       fetchUserProfile: async (username: string) => {
-        console.log('[UserStore] Fetching profile for username:', username)
-        
         set((state) => {
           state.loading = true
           state.error = null
@@ -288,7 +286,6 @@ export const useUserStore = create<UserStore>()(
       },
 
       clearProfile: () => {
-        console.log('[UserStore] Clearing profile data')
         set((state) => {
           state.profileUser = null
           state.userPosts = []

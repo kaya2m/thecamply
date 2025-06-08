@@ -24,9 +24,7 @@ export const AuthHeaderInterceptor: React.FC = () => {
           ?.split('=')[1]
         if (token) {
           headers.set('Authorization', `Bearer ${token}`)
-          console.log('Adding auth header from cookie for fetch')
         } else {
-          console.log('No token found in cookie for fetch')
         }
       }
       const updatedInit = {
