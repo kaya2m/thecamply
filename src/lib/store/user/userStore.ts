@@ -5,7 +5,15 @@ import { apiClient } from '@/lib/api/client'
 import { ApiError } from '@/lib/api/errors'
 
 import type { Post, PostsResponse } from '@/shared/types/post'
-import { mapApiUserToProfile, PagedList, UpdateProfileRequest, UserProfile, UserProfileResponse, UserSummaryResponse } from '@/lib/types/auth'
+import {
+  mapApiUserToProfile,
+  PagedList,
+  UpdateProfileRequest,
+  UserProfile,
+  UserProfileResponse,
+  UserSummaryResponse,
+} from '@/lib/types/auth'
+import { useAuthStore } from '../auth/authStore'
 
 interface UserState {
   profileUser: UserProfile | null
@@ -22,8 +30,16 @@ interface UserState {
 interface UserStore extends UserState {
   fetchUserProfile: (username: string) => Promise<void>
   fetchUserPosts: (userId: string, page?: number) => Promise<void>
-  fetchFollowers: (userId: string, page?: number, pageSize?: number) => Promise<void>
-  fetchFollowing: (userId: string, page?: number, pageSize?: number) => Promise<void>
+  fetchFollowers: (
+    userId: string,
+    page?: number,
+    pageSize?: number
+  ) => Promise<void>
+  fetchFollowing: (
+    userId: string,
+    page?: number,
+    pageSize?: number
+  ) => Promise<void>
   followUser: (userId: string) => Promise<void>
   unfollowUser: (userId: string) => Promise<void>
   updateProfile: (data: UpdateProfileRequest) => Promise<void>
@@ -53,7 +69,9 @@ export const useUserStore = create<UserStore>()(
         })
 
         try {
-          const apiResponse = await apiClient.get<UserProfileResponse>(`/users/by-username/${username}`)
+          const apiResponse = await apiClient.get<UserProfileResponse>(
+            `/users/by-username/${username}`
+          )
           debugger
           if (!apiResponse) {
             throw new Error('Invalid API response format')
@@ -92,7 +110,9 @@ export const useUserStore = create<UserStore>()(
         })
 
         try {
-          const response = await apiClient.get<PostsResponse>(`/posts/by-user/${userId}?page=${page}&pageSize=10`)
+          const response = await apiClient.get<PostsResponse>(
+            `/posts/by-user/${userId}?page=${page}&pageSize=10`
+          )
           if (!response) {
           }
 
@@ -107,7 +127,10 @@ export const useUserStore = create<UserStore>()(
         } catch (error) {
           console.error('[UserStore] Posts fetch failed:', error)
           set((state) => {
-            state.error = error instanceof ApiError ? error.message : 'Failed to fetch user posts'
+            state.error =
+              error instanceof ApiError
+                ? error.message
+                : 'Failed to fetch user posts'
             state.postsLoading = false
           })
         }
@@ -120,7 +143,9 @@ export const useUserStore = create<UserStore>()(
         })
 
         try {
-          const response = await apiClient.get<PagedList<UserSummaryResponse>>(`/users/${userId}/followers?page=${page}&pageSize=${pageSize}`)
+          const response = await apiClient.get<PagedList<UserSummaryResponse>>(
+            `/users/${userId}/followers?page=${page}&pageSize=${pageSize}`
+          )
           if (!response || !response.data) {
             throw new Error('Invalid followers response format')
           }
@@ -134,7 +159,10 @@ export const useUserStore = create<UserStore>()(
           })
         } catch (error) {
           set((state) => {
-            state.error = error instanceof ApiError ? error.message : 'Failed to fetch followers'
+            state.error =
+              error instanceof ApiError
+                ? error.message
+                : 'Failed to fetch followers'
             state.followersLoading = false
           })
         }
@@ -147,7 +175,9 @@ export const useUserStore = create<UserStore>()(
         })
 
         try {
-          const response = await apiClient.get<PagedList<UserSummaryResponse>>(`/users/${userId}/following?page=${page}&pageSize=${pageSize}`)
+          const response = await apiClient.get<PagedList<UserSummaryResponse>>(
+            `/users/${userId}/following?page=${page}&pageSize=${pageSize}`
+          )
           if (!response || !response.data) {
             throw new Error('Invalid following response format')
           }
@@ -161,7 +191,10 @@ export const useUserStore = create<UserStore>()(
           })
         } catch (error) {
           set((state) => {
-            state.error = error instanceof ApiError ? error.message : 'Failed to fetch following'
+            state.error =
+              error instanceof ApiError
+                ? error.message
+                : 'Failed to fetch following'
             state.followingLoading = false
           })
         }
@@ -178,7 +211,10 @@ export const useUserStore = create<UserStore>()(
           })
         } catch (error) {
           set((state) => {
-            state.error = error instanceof ApiError ? error.message : 'Failed to follow user'
+            state.error =
+              error instanceof ApiError
+                ? error.message
+                : 'Failed to follow user'
           })
           throw error
         }
@@ -195,7 +231,10 @@ export const useUserStore = create<UserStore>()(
           })
         } catch (error) {
           set((state) => {
-            state.error = error instanceof ApiError ? error.message : 'Failed to unfollow user'
+            state.error =
+              error instanceof ApiError
+                ? error.message
+                : 'Failed to unfollow user'
           })
           throw error
         }
@@ -208,7 +247,10 @@ export const useUserStore = create<UserStore>()(
         })
 
         try {
-          const response = await apiClient.put<UserProfileResponse>('/users/me', data)
+          const response = await apiClient.put<UserProfileResponse>(
+            '/users/me',
+            data
+          )
           if (!response || !response) {
             throw new Error('Invalid profile update response')
           }
@@ -217,9 +259,34 @@ export const useUserStore = create<UserStore>()(
             state.profileUser = updatedProfile
             state.loading = false
           })
+
+          const authStore = useAuthStore.getState()
+          if (authStore.user) {
+            const updatedUser = {
+              ...authStore.user,
+              name: data.name || authStore.user.name,
+              surname: data.surname || authStore.user.surname,
+              username: data.userName || authStore.user.username,
+              bio: data.bio || authStore.user.bio,
+              dateOfBirth: data.birthDate || authStore.user.dateOfBirth,
+            }
+
+            useAuthStore.setState((state) => ({
+              ...state,
+              user: updatedUser,
+            }))
+
+            console.log(
+              'Auth storage updated after profile update:',
+              updatedUser
+            )
+          }
         } catch (error) {
           set((state) => {
-            state.error = error instanceof ApiError ? error.message : 'Failed to update profile'
+            state.error =
+              error instanceof ApiError
+                ? error.message
+                : 'Failed to update profile'
             state.loading = false
           })
           throw error
@@ -235,7 +302,10 @@ export const useUserStore = create<UserStore>()(
         try {
           const formData = new FormData()
           formData.append('avatar', file)
-          const result = await apiClient.upload<{ url: string }>('/users/me/avatar', formData)
+          const result = await apiClient.upload<{ url: string }>(
+            '/media/upload-profile',
+            formData
+          )
           if (!result || !result.url) {
             throw new Error('Invalid avatar upload response')
           }
@@ -247,7 +317,10 @@ export const useUserStore = create<UserStore>()(
           })
         } catch (error) {
           set((state) => {
-            state.error = error instanceof ApiError ? error.message : 'Failed to upload avatar'
+            state.error =
+              error instanceof ApiError
+                ? error.message
+                : 'Failed to upload avatar'
             state.loading = false
           })
           throw error
@@ -263,13 +336,13 @@ export const useUserStore = create<UserStore>()(
         try {
           const formData = new FormData()
           formData.append('cover', file)
-          
-          const result = await apiClient.upload<{ url: string }>('/users/me/cover-photo', formData)
-          
+          const result = await apiClient.upload<{ url: string }>(
+            '/users/me/cover-photo',
+            formData
+          )
           if (!result || !result.url) {
             throw new Error('Invalid cover photo upload response')
           }
-          
           set((state) => {
             if (state.profileUser) {
               state.profileUser.coverPhoto = result.url
@@ -278,7 +351,10 @@ export const useUserStore = create<UserStore>()(
           })
         } catch (error) {
           set((state) => {
-            state.error = error instanceof ApiError ? error.message : 'Failed to upload cover photo'
+            state.error =
+              error instanceof ApiError
+                ? error.message
+                : 'Failed to upload cover photo'
             state.loading = false
           })
           throw error
@@ -303,11 +379,11 @@ export const useUserStore = create<UserStore>()(
         set((state) => {
           state.error = null
         })
-      }
+      },
     })),
     {
       name: 'user-store',
-      enabled: process.env.NODE_ENV === 'development'
+      enabled: process.env.NODE_ENV === 'development',
     }
   )
 )

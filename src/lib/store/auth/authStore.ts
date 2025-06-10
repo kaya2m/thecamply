@@ -5,20 +5,35 @@ import { devtools } from 'zustand/middleware'
 import { apiClient } from '@/lib/api/client'
 import { API_ENDPOINTS } from '@/lib/api/endpoints'
 import { ApiError } from '@/lib/api/errors'
-import { AuthResponse, AuthState, LoginFormData, RegisterFormData, SocialLoginRequest, User } from '@/lib/types/auth'
+import {
+  AuthResponse,
+  AuthState,
+  LoginFormData,
+  RegisterFormData,
+  SocialLoginRequest,
+  User,
+} from '@/lib/types/auth'
 
 interface AuthStore extends AuthState {
   login: (credentials: LoginFormData) => Promise<void>
   register: (data: RegisterFormData) => Promise<void>
-  socialLogin: (provider: 'google' | 'facebook', accessToken: string, idToken?: string) => Promise<void>
+  socialLogin: (
+    provider: 'google' | 'facebook',
+    accessToken: string,
+    idToken?: string
+  ) => Promise<void>
   logout: () => Promise<void>
   refreshToken: () => Promise<void>
   updateProfile: (updates: Partial<User>) => Promise<void>
-  changePassword: (currentPassword: string, newPassword: string) => Promise<void>
+
+  changePassword: (
+    currentPassword: string,
+    newPassword: string
+  ) => Promise<void>
   forgotPassword: (email: string) => Promise<void>
   resetPassword: (token: string, password: string) => Promise<void>
   verifyEmail: (token: string) => Promise<void>
-  
+
   clearError: () => void
   setLoading: (loading: boolean) => void
   reset: () => void
@@ -27,23 +42,44 @@ interface AuthStore extends AuthState {
   clearAuthData: () => void
   getStoredRefreshToken: () => string | null
   getStoredToken: () => string | null
+
+  updateUserInfo: (updates: Partial<User>) => void
+  updateUserAvatar: (avatarUrl: string) => void
+  updateUsername: (newUsername: string) => void
 }
 
+const debugCookies = () => {
+  if (typeof window === 'undefined') return
+  const cookies = document.cookie.split(';').reduce(
+    (acc, cookie) => {
+      const [name, value] = cookie.trim().split('=')
+      acc[name] = value
+      return acc
+    },
+    {} as Record<string, string>
+  )
+}
 const setCookie = (name: string, value: string, days: number = 7) => {
   if (typeof window === 'undefined') return
-  
   const expires = new Date()
-  expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000))
-  
+  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000)
   const isSecure = window.location.protocol === 'https:'
-  const cookieString = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=Lax${isSecure ? '; Secure' : ''}`
-  
+  const domain =
+    window.location.hostname === 'localhost'
+      ? ''
+      : `; domain=${window.location.hostname}`
+  const cookieString = `${name}=${value}; expires=${expires.toUTCString()}; path=/${domain}; SameSite=Lax${isSecure ? '; Secure' : ''}`
+  console.log('Setting cookie:', cookieString)
   document.cookie = cookieString
+  setTimeout(() => {
+    const setCookieValue = getCookie(name)
+    console.log(`Cookie ${name} set check:`, setCookieValue)
+    debugCookies()
+  }, 100)
 }
-
 const getCookie = (name: string): string | null => {
   if (typeof window === 'undefined') return null
-  const nameEQ = name + "="
+  const nameEQ = name + '='
   const ca = document.cookie.split(';')
   for (let i = 0; i < ca.length; i++) {
     let c = ca[i]
@@ -87,11 +123,11 @@ export const useAuthStore = create<AuthStore>()(
               }
             )
             await get().handleAuthSuccess(response)
-
           } catch (error) {
             console.error('Login failed:', error)
             set((state) => {
-              state.error = error instanceof ApiError ? error.message : 'Login failed'
+              state.error =
+                error instanceof ApiError ? error.message : 'Login failed'
               state.isLoading = false
             })
             throw error
@@ -118,49 +154,61 @@ export const useAuthStore = create<AuthStore>()(
             )
 
             await get().handleAuthSuccess(response)
-
           } catch (error) {
             set((state) => {
-              state.error = error instanceof ApiError ? error.message : 'Registration failed'
+              state.error =
+                error instanceof ApiError
+                  ? error.message
+                  : 'Registration failed'
               state.isLoading = false
             })
             throw error
           }
         },
 
-        socialLogin: async (provider: 'google' | 'facebook', accessToken: string, idToken?: string) => {
+        socialLogin: async (
+          provider: 'google' | 'facebook',
+          accessToken: string,
+          idToken?: string
+        ) => {
           set((state) => {
             state.isLoading = true
             state.error = null
           })
 
           try {
-            const endpoint = provider === 'google'
-              ? API_ENDPOINTS.AUTH.SOCIAL.GOOGLE
-              : API_ENDPOINTS.AUTH.SOCIAL.FACEBOOK
+            const endpoint =
+              provider === 'google'
+                ? API_ENDPOINTS.AUTH.SOCIAL.GOOGLE
+                : API_ENDPOINTS.AUTH.SOCIAL.FACEBOOK
 
-            let requestData: any = {};
+            let requestData: any = {}
             if (provider === 'google') {
               requestData = {
-                provider: "google",
-                accessToken: accessToken || "",
-                idToken: idToken || ""
-              };
+                provider: 'google',
+                accessToken: accessToken || '',
+                idToken: idToken || '',
+              }
             } else {
               requestData = {
                 provider,
                 accessToken,
                 ...(idToken && { idToken }),
-              };
+              }
             }
 
-            const response = await apiClient.post<AuthResponse>(endpoint, requestData)
+            const response = await apiClient.post<AuthResponse>(
+              endpoint,
+              requestData
+            )
             await get().handleAuthSuccess(response)
-
           } catch (error) {
             console.error('Social login failed:', error)
             set((state) => {
-              state.error = error instanceof ApiError ? error.message : `${provider} login failed`
+              state.error =
+                error instanceof ApiError
+                  ? error.message
+                  : `${provider} login failed`
               state.isLoading = false
             })
             throw error
@@ -174,10 +222,33 @@ export const useAuthStore = create<AuthStore>()(
             get().clearAuthData()
           }
         },
+        updateUserInfo: (updates: Partial<User>) => { 
+          set((state) => {
+            if (state.user) {
+              state.user = { ...state.user, ...updates }
+            }
+          })
+        },
+
+        updateUserAvatar: (avatarUrl: string) => {
+          set((state) => {
+            if (state.user) {
+              state.user.profileImageUrl = avatarUrl
+            }
+          })
+        },
+
+        updateUsername: (newUsername: string) => {
+          set((state) => {
+            if (state.user) {
+              state.user.username = newUsername
+            }
+          })
+        },
 
         refreshToken: async () => {
           const refreshToken = get().getStoredRefreshToken()
-          
+
           if (!refreshToken) {
             throw new Error('No refresh token available')
           }
@@ -215,14 +286,20 @@ export const useAuthStore = create<AuthStore>()(
             })
           } catch (error) {
             set((state) => {
-              state.error = error instanceof ApiError ? error.message : 'Profile update failed'
+              state.error =
+                error instanceof ApiError
+                  ? error.message
+                  : 'Profile update failed'
               state.isLoading = false
             })
             throw error
           }
         },
 
-        changePassword: async (currentPassword: string, newPassword: string) => {
+        changePassword: async (
+          currentPassword: string,
+          newPassword: string
+        ) => {
           set((state) => {
             state.isLoading = true
             state.error = null
@@ -239,7 +316,10 @@ export const useAuthStore = create<AuthStore>()(
             })
           } catch (error) {
             set((state) => {
-              state.error = error instanceof ApiError ? error.message : 'Password change failed'
+              state.error =
+                error instanceof ApiError
+                  ? error.message
+                  : 'Password change failed'
               state.isLoading = false
             })
             throw error
@@ -259,7 +339,10 @@ export const useAuthStore = create<AuthStore>()(
             })
           } catch (error) {
             set((state) => {
-              state.error = error instanceof ApiError ? error.message : 'Failed to send reset email'
+              state.error =
+                error instanceof ApiError
+                  ? error.message
+                  : 'Failed to send reset email'
               state.isLoading = false
             })
             throw error
@@ -275,7 +358,7 @@ export const useAuthStore = create<AuthStore>()(
           try {
             await apiClient.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, {
               token,
-              password
+              password,
             })
 
             set((state) => {
@@ -283,13 +366,16 @@ export const useAuthStore = create<AuthStore>()(
             })
           } catch (error) {
             set((state) => {
-              state.error = error instanceof ApiError ? error.message : 'Password reset failed'
+              state.error =
+                error instanceof ApiError
+                  ? error.message
+                  : 'Password reset failed'
               state.isLoading = false
             })
             throw error
           }
         },
-sendForgotPasswordCode: async (email: string) => {
+        sendForgotPasswordCode: async (email: string) => {
           set((state) => {
             state.isLoading = true
             state.error = null
@@ -303,7 +389,10 @@ sendForgotPasswordCode: async (email: string) => {
           } catch (error) {
             console.error('Failed to send forgot password code:', error)
             set((state) => {
-              state.error = error instanceof ApiError ? error.message : 'Failed to send reset code'
+              state.error =
+                error instanceof ApiError
+                  ? error.message
+                  : 'Failed to send reset code'
               state.isLoading = false
             })
             throw error
@@ -319,7 +408,7 @@ sendForgotPasswordCode: async (email: string) => {
           try {
             await apiClient.post('/users/verify-reset-code', {
               email,
-              code
+              code,
             })
             set((state) => {
               state.isLoading = false
@@ -327,7 +416,10 @@ sendForgotPasswordCode: async (email: string) => {
           } catch (error) {
             console.error('Failed to verify reset code:', error)
             set((state) => {
-              state.error = error instanceof ApiError ? error.message : 'Invalid verification code'
+              state.error =
+                error instanceof ApiError
+                  ? error.message
+                  : 'Invalid verification code'
               state.isLoading = false
             })
             throw error
@@ -343,7 +435,7 @@ sendForgotPasswordCode: async (email: string) => {
           try {
             await apiClient.post('/users/reset-password', {
               email,
-              newPassword
+              newPassword,
             })
             set((state) => {
               state.isLoading = false
@@ -351,7 +443,10 @@ sendForgotPasswordCode: async (email: string) => {
           } catch (error) {
             console.error('Failed to reset password:', error)
             set((state) => {
-              state.error = error instanceof ApiError ? error.message : 'Failed to reset password'
+              state.error =
+                error instanceof ApiError
+                  ? error.message
+                  : 'Failed to reset password'
               state.isLoading = false
             })
             throw error
@@ -373,7 +468,10 @@ sendForgotPasswordCode: async (email: string) => {
             })
           } catch (error) {
             set((state) => {
-              state.error = error instanceof ApiError ? error.message : 'Email verification failed'
+              state.error =
+                error instanceof ApiError
+                  ? error.message
+                  : 'Email verification failed'
               state.isLoading = false
             })
             throw error
@@ -396,34 +494,35 @@ sendForgotPasswordCode: async (email: string) => {
           set(() => ({ ...initialState }))
         },
 
-       handleAuthSuccess: async (response: AuthResponse) => {
-  const { user, accessToken, refreshToken, expiresAt } = response
+        handleAuthSuccess: async (response: AuthResponse) => {
+          const { user, accessToken, refreshToken, expiresAt } = response
 
-  if (typeof window !== 'undefined') {
-    if (accessToken) {
-      document.cookie = `auth-token=${accessToken}; path=/; max-age=${7*24*60*60}; SameSite=Lax`;
-    }
-    if (refreshToken) {
-      document.cookie = `refresh-token=${refreshToken}; path=/; max-age=${30*24*60*60}; SameSite=Lax`;
-    }
-  }
+          debugger
+          if (typeof window !== 'undefined') {
+            if (accessToken) {
+              setCookie('auth-token', accessToken, 7)
+            }
+            if (refreshToken) {
+              setCookie('refresh-token', refreshToken, 30)
+            }
+          }
 
-  const sessionExpiresAt = expiresAt
-    ? new Date(expiresAt).getTime()
-    : Date.now() + (24 * 60 * 60 * 1000) 
+          const sessionExpiresAt = expiresAt
+            ? new Date(expiresAt).getTime()
+            : Date.now() + 24 * 60 * 60 * 1000
 
-  set((state) => {
-    state.user = user
-    state.isAuthenticated = true
-    state.isLoading = false
-    state.error = null
-    state.lastLoginAt = Date.now()
-    state.sessionExpiresAt = sessionExpiresAt
-  })
+          set((state) => {
+            state.user = user
+            state.isAuthenticated = true
+            state.isLoading = false
+            state.error = null
+            state.lastLoginAt = Date.now()
+            state.sessionExpiresAt = sessionExpiresAt
+          })
 
-  await new Promise(resolve => setTimeout(resolve, 100))
-}
-,
+          await new Promise((resolve) => setTimeout(resolve, 100))
+        },
+
         clearAuthData: () => {
           if (typeof window !== 'undefined') {
             deleteCookie('auth-token')
@@ -432,7 +531,6 @@ sendForgotPasswordCode: async (email: string) => {
 
           set(() => ({ ...initialState }))
         },
-
         getStoredRefreshToken: (): string | null => {
           if (typeof window === 'undefined') return null
           return getCookie('refresh-token')
@@ -448,7 +546,6 @@ sendForgotPasswordCode: async (email: string) => {
           if (!sessionExpiresAt) return false
           return Date.now() > sessionExpiresAt
         },
-
       })),
       {
         name: 'auth-storage',
@@ -477,7 +574,7 @@ sendForgotPasswordCode: async (email: string) => {
               useAuthStore.getState().clearAuthData()
             }
           }
-        }
+        },
       }
     ),
     {
@@ -488,7 +585,8 @@ sendForgotPasswordCode: async (email: string) => {
 )
 
 export const useAuthUser = () => useAuthStore((state) => state.user)
-export const useIsAuthenticated = () => useAuthStore((state) => state.isAuthenticated)
+export const useIsAuthenticated = () =>
+  useAuthStore((state) => state.isAuthenticated)
 export const useAuthLoading = () => useAuthStore((state) => state.isLoading)
 export const useAuthError = () => useAuthStore((state) => state.error)
 
@@ -503,12 +601,12 @@ export const setupTokenRefresh = () => {
     clearTimeout(refreshTimer)
   }
 
-  const refreshTime = store.sessionExpiresAt - Date.now() - (5 * 60 * 1000)
+  const refreshTime = store.sessionExpiresAt - Date.now() - 5 * 60 * 1000
   if (refreshTime > 0) {
     refreshTimer = setTimeout(async () => {
       try {
         await store.refreshToken()
-        setupTokenRefresh() 
+        setupTokenRefresh()
       } catch (error) {
         console.error('Auto token refresh failed:', error)
         store.logout()

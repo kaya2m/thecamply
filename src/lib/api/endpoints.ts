@@ -15,7 +15,6 @@ export const API_ENDPOINTS = {
   },
 
   USERS: {
-    // Düzeltilmiş endpoint - API'nizle uyumlu olması için
     BY_USERNAME: (username: string) => `/users/by-username/${username}`,
     BY_ID: (id: string) => `/users/${id}`,
     ME: '/users/me',
@@ -30,7 +29,6 @@ export const API_ENDPOINTS = {
   },
 
   POSTS: {
-    // Posts için endpoint'ler - bu endpoint'lerin API'nizde mevcut olduğundan emin olun
     BY_USER: (userId: string) => `/posts/by-user/${userId}`,
     LIST: '/posts',
     CREATE: '/posts',
